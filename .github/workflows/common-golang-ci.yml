@@ -1,0 +1,36 @@
+name: Golang-CI
+
+on:
+  workflow_call:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  CI_Pipeline:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    container:
+      image: icr.io/goldeneye_images/goldeneye-ci-image:@sha256:354d7923003d2bff782f4b70b3563596185851c6e48ca9fd278fe8f32e395f88
+      env:
+        NO_CONTAINER: "true"
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          submodules: true
+          # Clone all branches and history. This is needed for the upgrade tests
+          fetch-depth: 0
+
+      # run pre-commit against all files
+      - name: Pre-commit
+        run: |
+          # Setup environment since GHA does not run the containers entrypoint
+          . /root/.bashrc
+          . /root/.profile
+          make pre-commit-sweeper
+
+      # Run tests
+      - name: Run Tests
+        run: make run-go-module-tests
