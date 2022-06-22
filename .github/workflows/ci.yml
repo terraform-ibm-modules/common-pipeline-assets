@@ -29,11 +29,11 @@ jobs:
       - name: Setup tools
         run: |
           pip install pre-commit
-          make pre-commit
+          make pre-commit-no-terraform
 
       # Check for pre-commit updates if it is a renovate PR
       - name: Pre-commit sweeper
-        run: module-assets/ci/pre-commit-sweeper.sh
+        run: make pre-commit-sweeper
 
       # run pre-commit against all files
       - name: Pre-commit
