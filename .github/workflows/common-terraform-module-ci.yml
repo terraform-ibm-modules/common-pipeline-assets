@@ -12,8 +12,9 @@ jobs:
       run:
         shell: bash
     container:
-      # TODO: create renovate rule to bump SHA
-      image: icr.io/goldeneye_images/goldeneye-ci-image:@sha256:354d7923003d2bff782f4b70b3563596185851c6e48ca9fd278fe8f32e395f88
+      # TODO: create renovate rule to bump SHA and use it instead of stable tag
+      #      image: icr.io/goldeneye_images/goldeneye-ci-image:@sha256:354d7923003d2bff782f4b70b3563596185851c6e48ca9fd278fe8f32e395f88
+      image: icr.io/goldeneye_images/goldeneye-ci-image:stable
       env:
         TF_VAR_ibmcloud_api_key: ${{ secrets.IBMCLOUD_API_KEY }}
         IC_API_KEY: ${{ secrets.IBMCLOUD_API_KEY }}
