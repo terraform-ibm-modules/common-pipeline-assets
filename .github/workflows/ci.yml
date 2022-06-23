@@ -13,7 +13,6 @@ on:
 
 env:
   NO_CONTAINER: "true"
-  GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -33,12 +32,14 @@ jobs:
       - name: Setup tools
         run: |
           pip install pre-commit
-          make pre-commit-no-terraform
+          pre-commit install
 
       # Check for pre-commit updates if it is a renovate PR
-      - name: Pre-commit sweeper
+      - name: Renovate pre-commit sweeper
         run: make pre-commit-sweeper
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
       # run pre-commit against all files
       - name: Pre-commit
-        run: pre-commit run --all-files
+        run: make pre-commit-no-terraform

@@ -9,6 +9,7 @@ jobs:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
     container:
+      # TODO: create renovate rule to bump SHA
       image: icr.io/goldeneye_images/goldeneye-ci-image:@sha256:354d7923003d2bff782f4b70b3563596185851c6e48ca9fd278fe8f32e395f88
       env:
         NO_CONTAINER: "true"
@@ -23,14 +24,28 @@ jobs:
           # Clone all branches and history. This is needed for the upgrade tests
           fetch-depth: 0
 
-      # run pre-commit against all files
-      - name: Pre-commit
+      # Check for pre-commit updates if it is a renovate PR
+      - name: Renovate pre-commit sweeper
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           # Setup environment since GHA does not run the containers entrypoint
           . /root/.bashrc
           . /root/.profile
           make pre-commit-sweeper
 
+      # run pre-commit against all files
+      - name: Pre-commit
+        run: |
+          # Setup environment since GHA does not run the containers entrypoint
+          . /root/.bashrc
+          . /root/.profile
+          make pre-commit-no-terraform
+
       # Run tests
       - name: Run Tests
-        run: make run-go-module-tests
+        run: |
+          # Setup environment since GHA does not run the containers entrypoint
+          . /root/.bashrc
+          . /root/.profile
+          make run-go-module-tests
