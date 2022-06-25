@@ -13,6 +13,5 @@ on:
 jobs:
   call-release-pipeline:
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') }}
-    # TODO: Lock this into a release version and create renovate rule to bump it
-    uses: terraform-ibm-modules/common-pipeline-assets/.github/workflows/common-release.yml@main
+    uses: terraform-ibm-modules/common-pipeline-assets/.github/workflows/common-release.yml@v1.1.0
     secrets: inherit
