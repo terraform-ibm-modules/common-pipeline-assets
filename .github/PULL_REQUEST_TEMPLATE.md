@@ -19,4 +19,3 @@ Please include a summary of the change and which issue is fixed. Also, please in
 
 - Merge using "Squash and merge".
 - Make sure to use a relevant [conventional commit](https://www.conventionalcommits.org/) message that is based on the PR contents. The commit message determines whether a new version of the modules needs to be released, and if so, which semver number to use).
-- 
