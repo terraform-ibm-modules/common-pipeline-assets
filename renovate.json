@@ -12,6 +12,7 @@
   ],
   "packageRules": [
     {
+      "description": "Only bump the docker image sha once a week, meaning we will only release a new version of common-pipeline-assets once a week. Without this schedule, it would create daily releases, which is overkill."
       "matchDatasources": ["docker"],
       "schedule": ["before 1pm on Monday"]
     }
