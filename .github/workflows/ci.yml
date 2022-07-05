@@ -35,8 +35,8 @@ jobs:
           pre-commit install
 
       # Check for pre-commit updates if it is a renovate PR
-      - name: Renovate pre-commit sweeper
-        run: make pre-commit-sweeper
+      - name: Renovate sweeper
+        run: make renovate-sweeper
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
