@@ -30,12 +30,12 @@ jobs:
           fetch-depth: 0
 
       # Check for pre-commit updates if it is a renovate PR
-      - name: Renovate pre-commit sweeper
+      - name: Renovate sweeper
         run: |
           # Setup environment since GHA does not run the containers entrypoint
           . /root/.bashrc
           . /root/.profile
-          make pre-commit-sweeper
+          make renovate-sweeper
 
       # run pre-commit against all files
       - name: Pre-commit
