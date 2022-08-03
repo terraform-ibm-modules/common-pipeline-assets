@@ -6,6 +6,7 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   CI_Pipeline:
+    name: CI Pipeline
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
     defaults:
@@ -44,6 +45,27 @@ jobs:
           . /root/.bashrc
           . /root/.profile
           make pre-commit
+
+  Infrastructure_Tests:
+    name: Infrastructure Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    container:
+      image: icr.io/goldeneye_images/goldeneye-ci-image@sha256:33c3ba7b73503727f26e98df9ed5cdec561671ca460fb704fae6550feaaa5422
+      env:
+        TF_VAR_ibmcloud_api_key: ${{ secrets.IBMCLOUD_API_KEY }}
+        IC_API_KEY: ${{ secrets.IBMCLOUD_API_KEY }}
+        NO_CONTAINER: "true"
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          submodules: true
+          # Clone all branches and history. This is needed for the upgrade tests
+          fetch-depth: 0
 
       # run unit tests
       - name: Unit Tests
