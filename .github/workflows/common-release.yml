@@ -20,6 +20,8 @@ jobs:
         NO_CONTAINER: "true" # set so any Makefile actions will not run in new container
         CATALOG_TEKTON_WEBHOOK_TOKEN: ${{ secrets.CATALOG_TEKTON_WEBHOOK_TOKEN }}
         CATALOG_TEKTON_WEBHOOK_URL: ${{ secrets.CATALOG_TEKTON_WEBHOOK_URL }}
+        CATALOG_PUBLISH_APIKEY: ${{ secrets.CATALOG_PUBLISH_APIKEY }}
+        CATALOG_VALIDATION_APIKEY: ${{ secrets.CATALOG_VALIDATION_APIKEY }}
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
