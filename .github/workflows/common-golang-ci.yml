@@ -9,7 +9,7 @@ jobs:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
     container:
-      image: icr.io/goldeneye_images/goldeneye-ci-image@sha256:0c8bbdc4174741dc04f7b1cfeaa9ff92839b7436b8a47170fa08f497dc338ee3
+      image: icr.io/goldeneye_images/goldeneye-ci-image@sha256:91c90a29bcda02c764d96583eedb227e5e8cd8f3880dfcdbe1950b619dbb757f
       env:
         NO_CONTAINER: "true"
 
