@@ -13,7 +13,7 @@ jobs:
       run:
         shell: bash
     container:
-      image: icr.io/goldeneye_images/goldeneye-ci-image@sha256:91c90a29bcda02c764d96583eedb227e5e8cd8f3880dfcdbe1950b619dbb757f
+      image: icr.io/goldeneye_images/goldeneye-ci-image@sha256:88a939e4a57d93bbc171f714a027949e7fa79473e8049c12416cc9852e991cb9
       env:
         TF_VAR_ibmcloud_api_key: ${{ secrets.IBMCLOUD_API_KEY }}
         IC_API_KEY: ${{ secrets.IBMCLOUD_API_KEY }}
@@ -53,7 +53,7 @@ jobs:
       run:
         shell: bash
     container:
-      image: icr.io/goldeneye_images/goldeneye-ci-image@sha256:91c90a29bcda02c764d96583eedb227e5e8cd8f3880dfcdbe1950b619dbb757f
+      image: icr.io/goldeneye_images/goldeneye-ci-image@sha256:88a939e4a57d93bbc171f714a027949e7fa79473e8049c12416cc9852e991cb9
       env:
         TF_VAR_ibmcloud_api_key: ${{ secrets.IBMCLOUD_API_KEY }}
         IC_API_KEY: ${{ secrets.IBMCLOUD_API_KEY }}
