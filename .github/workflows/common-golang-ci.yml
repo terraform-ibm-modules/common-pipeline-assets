@@ -23,6 +23,14 @@ jobs:
           # Clone all branches and history. This is needed for the upgrade tests
           fetch-depth: 0
 
+      # Install dependencies
+      - name: Install dependencies
+        run: |
+          # Setup environment since GHA does not run the containers entrypoint
+          . /root/.bashrc
+          . /root/.profile
+          make
+
       # Check for pre-commit updates if it is a renovate PR
       - name: Renovate sweeper
         env:
