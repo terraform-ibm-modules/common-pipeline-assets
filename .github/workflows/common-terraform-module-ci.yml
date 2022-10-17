@@ -32,7 +32,11 @@ jobs:
 
       # Install dependencies
       - name: Install dependencies
-        run: make
+        run: |
+          # Setup environment since GHA does not run the containers entrypoint
+          . /root/.bashrc
+          . /root/.profile
+          make
 
       # Check for pre-commit updates if it is a renovate PR
       - name: Renovate sweeper
@@ -73,7 +77,11 @@ jobs:
 
       # Install dependencies
       - name: Install dependencies
-        run: make
+        run: |
+          # Setup environment since GHA does not run the containers entrypoint
+          . /root/.bashrc
+          . /root/.profile
+          make
 
       # run unit tests
       - name: Unit Tests
