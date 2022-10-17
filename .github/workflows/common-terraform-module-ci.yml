@@ -13,7 +13,7 @@ jobs:
       run:
         shell: bash
     container:
-      image: icr.io/goldeneye_images/goldeneye-ci-image@sha256:d25f3360948940748d7139c39c5a9969a06cfc06817ada0675f186057ead93ce
+      image: icr.io/goldeneye_images/goldeneye-ci-image@sha256:stable
       env:
         TF_VAR_ibmcloud_api_key: ${{ secrets.IBMCLOUD_API_KEY }}
         IC_API_KEY: ${{ secrets.IBMCLOUD_API_KEY }}
@@ -29,6 +29,10 @@ jobs:
           submodules: true
           # Clone all branches and history. This is needed for the upgrade tests
           fetch-depth: 0
+
+      # Install dependencies
+      - name: Install dependencies
+        run: make
 
       # Check for pre-commit updates if it is a renovate PR
       - name: Renovate sweeper
@@ -53,7 +57,7 @@ jobs:
       run:
         shell: bash
     container:
-      image: icr.io/goldeneye_images/goldeneye-ci-image@sha256:d25f3360948940748d7139c39c5a9969a06cfc06817ada0675f186057ead93ce
+      image: icr.io/goldeneye_images/goldeneye-ci-image@sha256:stable
       env:
         TF_VAR_ibmcloud_api_key: ${{ secrets.IBMCLOUD_API_KEY }}
         IC_API_KEY: ${{ secrets.IBMCLOUD_API_KEY }}
@@ -66,6 +70,10 @@ jobs:
           submodules: true
           # Clone all branches and history. This is needed for the upgrade tests
           fetch-depth: 0
+
+      # Install dependencies
+      - name: Install dependencies
+        run: make
 
       # run unit tests
       - name: Unit Tests
