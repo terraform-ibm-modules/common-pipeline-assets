@@ -29,7 +29,7 @@ jobs:
           # Setup environment since GHA does not run the containers entrypoint
           . /root/.bashrc
           . /root/.profile
-          make
+          make dependency-install-darwin-linux
 
       # Check for pre-commit updates if it is a renovate PR
       - name: Renovate sweeper
