@@ -9,7 +9,7 @@ jobs:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
     container:
-      image: icr.io/goldeneye_images/goldeneye-ci-image@sha256:d25f3360948940748d7139c39c5a9969a06cfc06817ada0675f186057ead93ce
+      image: icr.io/goldeneye_images/goldeneye-ci-image:stable
       env:
         NO_CONTAINER: "true"
 
@@ -22,6 +22,14 @@ jobs:
           submodules: true
           # Clone all branches and history. This is needed for the upgrade tests
           fetch-depth: 0
+
+      # Install dependencies
+      - name: Install dependencies
+        run: |
+          # Setup environment since GHA does not run the containers entrypoint
+          . /root/.bashrc
+          . /root/.profile
+          make dependency-install-darwin-linux
 
       # Check for pre-commit updates if it is a renovate PR
       - name: Renovate sweeper
