@@ -10,11 +10,11 @@ _extends: repo-settings
 # repo-specific settings
 
 repository:
-# See https://terraform-ibm-modules.github.io/documentation/#/implementation-guidelines?id=module-names-and-descriptions
+  # See https://terraform-ibm-modules.github.io/documentation/#/implementation-guidelines?id=module-names-and-descriptions
 
-# By changing this field, you rename the repository.
-name: "common-pipeline-assets"
+  # By changing this field, you rename the repository.
+  name: "common-pipeline-assets"
 
-# The description is displayed under the repository name on the
-# organization page and in the 'About' section of the repository.
-description: "Provides common pipeline and workflow assets that support the modules in this GitHub organization"
+  # The description is displayed under the repository name on the
+  # organization page and in the 'About' section of the repository.
+  description: "Provides common pipeline and workflow assets that support the modules in this GitHub organization"
