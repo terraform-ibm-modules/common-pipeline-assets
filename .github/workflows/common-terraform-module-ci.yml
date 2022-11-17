@@ -33,25 +33,16 @@ jobs:
       # Install dependencies
       - name: Install dependencies
         run: |
-          # Setup environment since GHA does not run the containers entrypoint
-          . /root/.bashrc
-          . /root/.profile
           make dependency-install-darwin-linux
 
       # Check for pre-commit updates if it is a renovate PR
       - name: Renovate sweeper
         run: |
-          # Setup environment since GHA does not run the containers entrypoint
-          . /root/.bashrc
-          . /root/.profile
           make renovate-sweeper
 
       # run pre-commit against all files
       - name: Pre-commit
         run: |
-          # Setup environment since GHA does not run the containers entrypoint
-          . /root/.bashrc
-          . /root/.profile
           make pre-commit
 
   Infrastructure_Tests:
@@ -78,15 +69,9 @@ jobs:
       # Install dependencies
       - name: Install dependencies
         run: |
-          # Setup environment since GHA does not run the containers entrypoint
-          . /root/.bashrc
-          . /root/.profile
           make dependency-install-darwin-linux
 
       # run unit tests
       - name: Unit Tests
         run: |
-          # Setup environment since GHA does not run the containers entrypoint
-          . /root/.bashrc
-          . /root/.profile
           make run-tests
