@@ -8,6 +8,11 @@ on:
         description: "Target directory for CRA scan. If not provided defaults to root of the repo"
         required: false
         default: ""
+      craGoalIgnoreFile:
+        type: string
+        description: "CRA Ignore file to use. If not provided checks repo root directory for cra-tf-validate-ignore-goals.json"
+        required: false
+        default: "cra-tf-validate-ignore-goals.json"
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -62,6 +67,7 @@ jobs:
       env:
         TF_VAR_ibmcloud_api_key: ${{ secrets.IBMCLOUD_API_KEY }}
         IC_API_KEY: ${{ secrets.IBMCLOUD_API_KEY }}
+        CRA_IGNORE_GOALS_FILE: "${{ env.GITHUB_WORKSPACE }}/${{ inputs.craGoalIgnoreFile }}"
         TOOLCHAIN_ID: ${{ secrets.IAC_GE_OPS_TOOLCHAIN_ID }}
         NO_CONTAINER: "true"
         MZ_INGESTION_KEY: ${{ secrets.MZ_INGESTION_KEY }}
