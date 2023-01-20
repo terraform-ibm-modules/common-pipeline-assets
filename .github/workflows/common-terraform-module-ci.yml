@@ -19,7 +19,7 @@ jobs:
       run:
         shell: bash
     container:
-      image: icr.io/goldeneye_images/goldeneye-ci-image@sha256:17225eb04fdfd309d3d9a973992ac4400dcced9ee7d9e3fdd7fb76362b453c85
+      image: icr.io/goldeneye_images/goldeneye-ci-image:stable
       env:
         TF_VAR_ibmcloud_api_key: ${{ secrets.IBMCLOUD_API_KEY }}
         IC_API_KEY: ${{ secrets.IBMCLOUD_API_KEY }}
@@ -36,20 +36,19 @@ jobs:
           # Clone all branches and history. This is needed for the upgrade tests
           fetch-depth: 0
 
+      # Install dependencies
+      - name: Install dependencies
+        run: |
+          make dependency-install-darwin-linux
+
       # Check for pre-commit updates if it is a renovate PR
       - name: Renovate sweeper
         run: |
-          # Setup environment since GHA does not run the containers entrypoint
-          . /root/.bashrc
-          . /root/.profile
           make renovate-sweeper
 
       # run pre-commit against all files
       - name: Pre-commit
         run: |
-          # Setup environment since GHA does not run the containers entrypoint
-          . /root/.bashrc
-          . /root/.profile
           make pre-commit
 
   Infrastructure_Tests:
@@ -59,12 +58,13 @@ jobs:
       run:
         shell: bash
     container:
-      image: icr.io/goldeneye_images/goldeneye-ci-image@sha256:17225eb04fdfd309d3d9a973992ac4400dcced9ee7d9e3fdd7fb76362b453c85
+      image: icr.io/goldeneye_images/goldeneye-ci-image:stable
       env:
         TF_VAR_ibmcloud_api_key: ${{ secrets.IBMCLOUD_API_KEY }}
         IC_API_KEY: ${{ secrets.IBMCLOUD_API_KEY }}
         TOOLCHAIN_ID: ${{ secrets.IAC_GE_OPS_TOOLCHAIN_ID }}
         NO_CONTAINER: "true"
+        MZ_INGESTION_KEY: ${{ secrets.MZ_INGESTION_KEY }}
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
@@ -73,6 +73,11 @@ jobs:
           submodules: true
           # Clone all branches and history. This is needed for the upgrade tests
           fetch-depth: 0
+
+      # Install dependencies
+      - name: Install dependencies
+        run: |
+          make dependency-install-darwin-linux
 
       # run CRA scan
       - name: CRA Scan
@@ -85,7 +90,4 @@ jobs:
       # run unit tests
       - name: Unit Tests
         run: |
-          # Setup environment since GHA does not run the containers entrypoint
-          . /root/.bashrc
-          . /root/.profile
           make run-tests
