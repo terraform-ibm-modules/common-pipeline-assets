@@ -67,7 +67,6 @@ jobs:
       env:
         TF_VAR_ibmcloud_api_key: ${{ secrets.IBMCLOUD_API_KEY }}
         IC_API_KEY: ${{ secrets.IBMCLOUD_API_KEY }}
-        CRA_IGNORE_GOALS_FILE: "${{ github.workspace }}/${{ inputs.craGoalIgnoreFile }}"
         TOOLCHAIN_ID: ${{ secrets.IAC_GE_OPS_TOOLCHAIN_ID }}
         NO_CONTAINER: "true"
         MZ_INGESTION_KEY: ${{ secrets.MZ_INGESTION_KEY }}
@@ -88,8 +87,8 @@ jobs:
       # run CRA scan
       - name: CRA Scan
         run: |
+          export CRA_IGNORE_GOALS_FILE="$(pwd)/${{ inputs.craGoalIgnoreFile }}"
           echo "CRA IGNORE FILE: ${CRA_IGNORE_GOALS_FILE}"
-          pwd
           ibmcloud plugin install cra
           ci/run-cra.sh "${{ inputs.craTarget }}"
 
