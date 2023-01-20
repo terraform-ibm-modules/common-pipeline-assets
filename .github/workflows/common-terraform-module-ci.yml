@@ -2,6 +2,12 @@ name: Terraform-Module-CI
 
 on:
   workflow_call:
+    inputs:
+      craTarget:
+        type: string
+        description: "Target directory for CRA scan. If not provided defaults to root of the repo"
+        required: false
+        default: ""
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -57,6 +63,7 @@ jobs:
       env:
         TF_VAR_ibmcloud_api_key: ${{ secrets.IBMCLOUD_API_KEY }}
         IC_API_KEY: ${{ secrets.IBMCLOUD_API_KEY }}
+        TOOLCHAIN_ID: ${{ secrets.IAC_GE_OPS_TOOLCHAIN_ID }}
         NO_CONTAINER: "true"
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -66,6 +73,14 @@ jobs:
           submodules: true
           # Clone all branches and history. This is needed for the upgrade tests
           fetch-depth: 0
+
+      # run CRA scan
+      - name: CRA Scan
+        run: |
+          # Setup environment since GHA does not run the containers entrypoint
+          . /root/.bashrc
+          . /root/.profile
+          ci/run-cra.sh "${{ inputs.craTarget }}"
 
       # run unit tests
       - name: Unit Tests
