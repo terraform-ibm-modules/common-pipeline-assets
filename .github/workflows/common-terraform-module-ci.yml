@@ -82,6 +82,9 @@ jobs:
       # run CRA scan
       - name: CRA Scan
         run: |
+          # Setup environment since GHA does not run the containers entrypoint
+          . /root/.bashrc
+          . /root/.profile
           ci/run-cra.sh "${{ inputs.craTarget }}"
 
       # run unit tests
