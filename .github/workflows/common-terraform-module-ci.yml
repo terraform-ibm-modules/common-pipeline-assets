@@ -89,6 +89,8 @@ jobs:
       - name: CRA Scan
         run: |
           echo "CRA IGNORE FILE: ${CRA_IGNORE_GOALS_FILE}"
+          pwd
+          ls
           ibmcloud plugin install cra
           ci/run-cra.sh "${{ inputs.craTarget }}"
 
