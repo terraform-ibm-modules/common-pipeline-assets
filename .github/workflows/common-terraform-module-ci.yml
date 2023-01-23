@@ -93,6 +93,7 @@ jobs:
       - name: CRA Scan
         run: |
           #!/bin/bash
+          set -e
 
           export CRA_IGNORE_GOALS_FILE="$(pwd)/${{ inputs.craGoalIgnoreFile }}"
           echo "CRA IGNORE FILE: ${CRA_IGNORE_GOALS_FILE}"
@@ -109,7 +110,7 @@ jobs:
             echo "No input environment variables to export"
           fi
 
-          ibmcloud plugin install cra
+          ibmcloud plugin install cra -f
           ci/run-cra.sh "${{ inputs.craTarget }}"
 
       # run unit tests
