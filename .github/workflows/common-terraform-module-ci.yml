@@ -2,6 +2,22 @@ name: Terraform-Module-CI
 
 on:
   workflow_call:
+    inputs:
+      craTarget:
+        type: string
+        description: "Target directory for CRA scan. If not provided defaults to root of the repo"
+        required: false
+        default: ""
+      craGoalIgnoreFile:
+        type: string
+        description: "CRA Ignore file to use. If not provided checks repo root directory for cra-tf-validate-ignore-goals.json"
+        required: false
+        default: "cra-tf-validate-ignore-goals.json"
+      craEnvironmentVariables:
+        type: string
+        description: "An optional list of environment variables to set for CRA, in comma seperated format 'VAR1=value1,VAR2=value2'. This can be used to provide TF_VAR's"
+        required: false
+        default: ""
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -56,6 +72,7 @@ jobs:
       env:
         TF_VAR_ibmcloud_api_key: ${{ secrets.IBMCLOUD_API_KEY }}
         IC_API_KEY: ${{ secrets.IBMCLOUD_API_KEY }}
+        TOOLCHAIN_ID: ${{ secrets.IAC_GE_OPS_TOOLCHAIN_ID }}
         NO_CONTAINER: "true"
         MZ_INGESTION_KEY: ${{ secrets.MZ_INGESTION_KEY }}
     steps:
@@ -71,6 +88,30 @@ jobs:
       - name: Install dependencies
         run: |
           make dependency-install-darwin-linux
+
+      # run CRA scan
+      - name: CRA Scan
+        run: |
+          #!/bin/bash
+          set -e
+
+          export CRA_IGNORE_GOALS_FILE="$(pwd)/${{ inputs.craGoalIgnoreFile }}"
+          echo "CRA IGNORE FILE: ${CRA_IGNORE_GOALS_FILE}"
+          ENV_VARS="${{ inputs.craEnvironmentVariables }}"
+          if [ -n "$ENV_VARS" ]; then
+            IFS=',' read -ra ENV_VARS_ARRAY <<< "$ENV_VARS"
+            for i in "${ENV_VARS_ARRAY[@]}"; do
+              # Use an array to store the variable and value
+              ENV_VAR=(${i//=/ })
+              echo "Exporting environment variable: ${ENV_VAR[0]}"
+              export "${ENV_VAR[0]}"="${ENV_VAR[1]}"
+            done
+          else
+            echo "No input environment variables to export"
+          fi
+
+          ibmcloud plugin install cra -f
+          ci/run-cra.sh "${{ inputs.craTarget }}"
 
       # run unit tests
       - name: Unit Tests
