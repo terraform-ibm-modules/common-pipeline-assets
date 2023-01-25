@@ -91,7 +91,7 @@ jobs:
 
       # run CRA scan
       - name: CRA Scan
-        if: inputs.craTarget != ""
+        if: inputs.craTarget != ''
         run: |
           #!/bin/bash
           set -e
