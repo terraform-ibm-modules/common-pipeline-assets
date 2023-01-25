@@ -5,7 +5,7 @@ on:
     inputs:
       craTarget:
         type: string
-        description: "Target directory for CRA scan. If not provided defaults to root of the repo"
+        description: "Target directory for CRA scan. If not provided CRA Scan will not be run"
         required: false
         default: ""
       craGoalIgnoreFile:
@@ -91,6 +91,7 @@ jobs:
 
       # run CRA scan
       - name: CRA Scan
+        if: inputs.craTarget != ""
         run: |
           #!/bin/bash
           set -e
