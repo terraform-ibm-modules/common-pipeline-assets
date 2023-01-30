@@ -32,7 +32,7 @@ jobs:
       - name: Set ownership
         run: |
           chown -R $(id -u):$(id -g) $PWD
-      
+
       # Setup tools
       - name: Setup tools
         run: |
