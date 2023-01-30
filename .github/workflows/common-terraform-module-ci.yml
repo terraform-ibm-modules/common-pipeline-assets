@@ -46,6 +46,11 @@ jobs:
           # Clone all branches and history. This is needed for the upgrade tests
           fetch-depth: 0
 
+      # Workaround for https://github.com/actions/runner/issues/2033
+      - name: Set ownership
+        run: |
+          chown -R $(id -u):$(id -g) $PWD
+
       # Install dependencies
       - name: Install dependencies
         run: |

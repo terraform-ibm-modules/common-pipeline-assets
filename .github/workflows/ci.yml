@@ -28,6 +28,11 @@ jobs:
           token: ${{ secrets.GH_TOKEN }}
           submodules: true
 
+      # Workaround for https://github.com/actions/runner/issues/2033
+      - name: Set ownership
+        run: |
+          chown -R $(id -u):$(id -g) $PWD
+
       # Setup tools
       - name: Setup tools
         run: |

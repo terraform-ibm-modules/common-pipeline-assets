@@ -31,6 +31,11 @@ jobs:
           token: ${{ secrets.GH_TOKEN }}
           submodules: true
 
+      # Workaround for https://github.com/actions/runner/issues/2033
+      - name: Set ownership
+        run: |
+          chown -R $(id -u):$(id -g) $PWD
+
       - name: Import GPG key
         id: import-gpg
         uses: crazy-max/ghaction-import-gpg@v5
