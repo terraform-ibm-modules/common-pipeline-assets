@@ -34,7 +34,6 @@ jobs:
         TF_VAR_ibmcloud_api_key: ${{ secrets.IBMCLOUD_API_KEY }}
         IC_API_KEY: ${{ secrets.IBMCLOUD_API_KEY }}
         GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        NO_CONTAINER: "true"
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -78,8 +77,8 @@ jobs:
         TF_VAR_ibmcloud_api_key: ${{ secrets.IBMCLOUD_API_KEY }}
         IC_API_KEY: ${{ secrets.IBMCLOUD_API_KEY }}
         TOOLCHAIN_ID: ${{ secrets.IAC_GE_OPS_TOOLCHAIN_ID }}
-        NO_CONTAINER: "true"
         MZ_INGESTION_KEY: ${{ secrets.MZ_INGESTION_KEY }}
+        TF_VAR_ibmcloud_api_key_ext: ${{ secrets.IBMCLOUD_API_KEY_GEStaging }}
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
