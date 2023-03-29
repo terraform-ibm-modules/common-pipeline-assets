@@ -10,8 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: icr.io/goldeneye_images/goldeneye-ci-image:stable
-      env:
-        NO_CONTAINER: "true"
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
