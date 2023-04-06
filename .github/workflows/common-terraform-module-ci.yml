@@ -120,7 +120,11 @@ jobs:
             echo "No input environment variables to export"
           fi
 
-          ibmcloud plugin install cra -f
+          # Install CRA plugin if not detected
+          if ! ibmcloud plugin show cra; then
+            ibmcloud plugin install cra -f
+          fi
+
           ci/run-cra.sh "${{ inputs.craTarget }}"
 
       # run unit tests
