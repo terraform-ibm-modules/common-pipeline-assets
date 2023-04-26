@@ -46,7 +46,7 @@ jobs:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
     # Don't run job on draft PRs
-    if: github.event.pull_request.draft == false
+#    if: github.event.pull_request.draft == false   # TODO: Enable after consuming pipelines have been updated
     defaults:
       run:
         shell: bash
@@ -91,7 +91,7 @@ jobs:
     name: Infrastructure Test
     runs-on: ubuntu-latest
     # Don't run job on draft PRs
-    if: github.event.pull_request.draft == false
+#    if: github.event.pull_request.draft == false  # TODO: Enable after consuming pipelines have been updated
     defaults:
       run:
         shell: bash
