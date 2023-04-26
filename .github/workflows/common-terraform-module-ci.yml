@@ -155,7 +155,6 @@ jobs:
           IFS=',' read -ra CRA_TARGETS_ARRAY <<< "${{ inputs.craTarget }}"
           for target in "${CRA_TARGETS_ARRAY[@]}"; do
             if ${{ inputs.craSCCv2 }}; then
-              
               ci/run-cra-scc-v2.sh "$target"
             else
               ci/run-cra.sh "$target"
