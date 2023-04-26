@@ -103,6 +103,8 @@ jobs:
         TOOLCHAIN_ID: ${{ secrets.IAC_GE_OPS_TOOLCHAIN_ID }}
         MZ_INGESTION_KEY: ${{ secrets.MZ_INGESTION_KEY }}
         TF_VAR_ibmcloud_api_key_ext: ${{ secrets.IBMCLOUD_API_KEY_GEStaging }}
+        PROFILE_ID: ${{ inputs.profileID }}
+        ACCOUNT_ID: ${{ inputs.accountID }}
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
@@ -153,7 +155,8 @@ jobs:
           IFS=',' read -ra CRA_TARGETS_ARRAY <<< "${{ inputs.craTarget }}"
           for target in "${CRA_TARGETS_ARRAY[@]}"; do
             if ${{ inputs.craSCCv2 }}; then
-              ci/run-cra-scc-v2.sh "$target" "${{ inputs.accountID }}" "${{ inputs.profileID }}" "${{ inputs.craRuleIgnoreFile }}"
+              
+              ci/run-cra-scc-v2.sh "$target"
             else
               ci/run-cra.sh "$target"
             fi
