@@ -30,7 +30,7 @@ on:
         default: "abac0df06b644a9cabc6e44f55b3880e"
       profileID:
         type: string
-        description: "CRA scc v2 needs the Pofile ID as Input. This is the profile ID you want to scan with(Default: IBM Cloud for Financial Services 1.2.0)"
+        description: "CRA scc v2 needs the Pofile ID as Input. This is the profile ID you want to scan with. Note IDs are region specific ensure you use a US one (Default: US IBM Cloud for Financial Services 1.2.0)"
         required: false
         default: "4c67f813-8723-4029-8b44-848fb989899e"
       craEnvironmentVariables:
@@ -132,7 +132,8 @@ jobs:
           set -e
 
           export CRA_IGNORE_GOALS_FILE="$(pwd)/${{ inputs.craGoalIgnoreFile }}"
-          echo "CRA IGNORE FILE: ${CRA_IGNORE_GOALS_FILE}"
+          export CRA_IGNORE_RULES_FILE="$(pwd)/${{ inputs.craRuleIgnoreFile }}"
+
           ENV_VARS="${{ inputs.craEnvironmentVariables }}"
           if [ -n "$ENV_VARS" ]; then
             IFS=',' read -ra ENV_VARS_ARRAY <<< "$ENV_VARS"
@@ -155,8 +156,10 @@ jobs:
           IFS=',' read -ra CRA_TARGETS_ARRAY <<< "${{ inputs.craTarget }}"
           for target in "${CRA_TARGETS_ARRAY[@]}"; do
             if ${{ inputs.craSCCv2 }}; then
+              echo "CRA IGNORE FILE: ${CRA_IGNORE_RULES_FILE}"
               ci/run-cra-scc-v2.sh "$target"
             else
+              echo "CRA IGNORE FILE: ${CRA_IGNORE_GOALS_FILE}"
               ci/run-cra.sh "$target"
             fi
           done
