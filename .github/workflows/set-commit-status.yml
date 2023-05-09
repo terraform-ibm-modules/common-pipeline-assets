@@ -1,0 +1,63 @@
+on:
+  workflow_call:
+    inputs:
+      github_token:
+        description: 'Personal access token used to authenticate with the GitHub API. Defaults to pipeline token'
+        required: false
+        type: string
+      state:
+        description: 'The state of the commit status'
+        required: true
+        type: string
+        default: 'pending'
+      description:
+        description: 'The description of the commit status'
+        required: false
+        type: string
+      context:
+        description: 'The context of the commit status'
+        required: false
+        type: string
+        default: 'default'
+      sha:
+        description: 'The SHA of the commit to set the status for'
+        required: true
+        type: string
+      target_url:
+        description: 'The URL of the target of the status update'
+        required: false
+        type: string
+        default: ''
+      github_repository:
+        description: 'The owner and name of the repository where the commit is located'
+        required: true
+        type: string
+
+
+jobs:
+  set-commit-status:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set Commit Status
+        env:
+          GITHUB_TOKEN: ${{ inputs.github_token || github.token }}
+        run: |
+          set -eu
+          set -o pipefail
+          STATE="${{ inputs.state }}"
+          DESCRIPTION="${{ inputs.description }}"
+          CONTEXT="${{ inputs.context }}"
+          SHA="${{ inputs.sha }}"
+          TARGET_URL="${{ inputs.target_url }}"
+
+          STATUS=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+               -H "Accept: application/vnd.github+json" \
+               -X POST \
+               --retry 3 \
+               -d "{\"state\":\"${STATE}\",\"description\":\"${DESCRIPTION}\",\"context\":\"${CONTEXT}\",\"target_url\":\"${TARGET_URL}\"}" \
+               -w "%{http_code}" \
+               "https://api.github.com/repos/${{ inputs.github_repository }}/statuses/${SHA}")
+          echo "STATUS: ${STATUS}"
+          if [[ "$STATUS" != *"201" ]]; then
+             exit 1
+          fi

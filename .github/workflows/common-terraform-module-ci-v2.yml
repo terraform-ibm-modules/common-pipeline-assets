@@ -1,0 +1,265 @@
+name: Terraform-Module-CI
+
+on:
+  workflow_call:
+    inputs:
+      craTarget:
+        type: string
+        description: "Target directory for CRA scan(accepts comma seperated list for multiple scans). If not provided CRA Scan will not be run"
+        required: false
+        default: ""
+      craGoalIgnoreFile:
+        type: string
+        description: "CRA Ignore file to use(Used for SCC v1). If not provided checks repo root directory for cra-tf-validate-ignore-goals.json"
+        required: false
+        default: "cra-tf-validate-ignore-goals.json"
+      craRuleIgnoreFile:
+        type: string
+        description: "CRA Ignore file to use (Used for SCC v2). If not provided checks repo root directory for cra-tf-validate-ignore-rules.json"
+        required: false
+        default: "cra-tf-validate-ignore-rules.json"
+      craSCCv2:
+        type: boolean
+        description: "Use SCCv2 CRA run-cra-scc-v2.sh"
+        required: false
+        default: false
+      accountID:
+        type: string
+        description: "CRA scc v2 needs the IBM Cloud Account ID as Input (Default GeDev)"
+        required: false
+        default: "abac0df06b644a9cabc6e44f55b3880e"
+      profileID:
+        type: string
+        description: "CRA scc v2 needs the Pofile ID as Input. This is the profile ID you want to scan with. Note IDs are region specific ensure you use a US one (Default: US IBM Cloud for Financial Services 1.2.0)"
+        required: false
+        default: "4c67f813-8723-4029-8b44-848fb989899e"
+      craEnvironmentVariables:
+        type: string
+        description: "An optional list of environment variables to set for CRA, in comma seperated format 'VAR1=value1,VAR2=value2'. This can be used to provide TF_VAR's"
+        required: false
+        default: ""
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  start-pipeline:
+    # Only start if the issue contains the lable ok-to-test and the run pipeline was posted by a collaborator
+    if: ${{ github.event.issue.pull_request && github.event.comment.body == '/run pipeline' && github.event.comment.author_association=='CONTRIBUTOR' }}
+    name: Get Commit ID
+    runs-on: ubuntu-latest
+    outputs:
+      commit_id: ${{ steps.commit_id.outputs.COMMIT_ID }}
+    steps:
+      - name: Get Latest Commit ID
+        id: commit_id
+        run: |
+          pull_request_url=$(jq -r ".issue.pull_request.url" "$GITHUB_EVENT_PATH")
+          commit_id=$(curl -s -H "Authorization: Bearer ${{ github.token }}" \
+            --retry 3 \
+            "$pull_request_url" \
+            | jq -r ".head.sha")
+          echo "COMMIT_ID=$commit_id" >> "$GITHUB_OUTPUT"
+
+  set-commit-status-ci-running:
+    uses: ./.github/workflows/set-commit-status.yml
+    needs: [ start-pipeline ]
+    with:
+      github_token: ${{ github.token }}
+      state: "pending"
+      description: "Running"
+      context: "CI_Pipeline"
+      sha: ${{needs.start-pipeline.outputs.commit_id}}
+      target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      github_repository: ${{ github.repository }}
+
+  set-commit-status-infra-running:
+    uses: ./.github/workflows/set-commit-status.yml
+    needs: [ start-pipeline ]
+    with:
+      github_token: ${{ github.token }}
+      state: "pending"
+      description: "Running"
+      context: "Infrastructure_Tests"
+      sha: ${{needs.start-pipeline.outputs.commit_id}}
+      target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      github_repository: ${{ github.repository }}
+
+  CI_Pipeline:
+    needs: [set-commit-status-ci-running, set-commit-status-infra-running]
+    name: CI Pipeline
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    container:
+      image: icr.io/goldeneye_images/goldeneye-ci-image:stable
+      env:
+        TF_VAR_ibmcloud_api_key: ${{ secrets.IBMCLOUD_API_KEY }}
+        IC_API_KEY: ${{ secrets.IBMCLOUD_API_KEY }}
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          submodules: true
+          # Clone all branches and history. This is needed for the upgrade tests
+          fetch-depth: 0
+
+      # Workaround for https://github.com/actions/runner/issues/2033
+      - name: Set ownership
+        run: |
+          chown -R $(id -u):$(id -g) $PWD
+
+      # Install dependencies
+      - name: Install dependencies
+        run: |
+          make dependency-install-darwin-linux
+
+      # Check for pre-commit updates if it is a renovate PR
+      - name: Renovate sweeper
+        run: |
+          make renovate-sweeper
+
+      # run pre-commit against all files
+      - name: Pre-commit
+        run: |
+          make pre-commit
+
+  Infrastructure_Tests:
+    needs: [CI_Pipeline]
+    name: Infrastructure Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    container:
+      image: icr.io/goldeneye_images/goldeneye-ci-image:stable
+      env:
+        TF_VAR_ibmcloud_api_key: ${{ secrets.IBMCLOUD_API_KEY }}
+        IC_API_KEY: ${{ secrets.IBMCLOUD_API_KEY }}
+        TOOLCHAIN_ID: ${{ secrets.IAC_GE_OPS_TOOLCHAIN_ID }}
+        MZ_INGESTION_KEY: ${{ secrets.MZ_INGESTION_KEY }}
+        TF_VAR_ibmcloud_api_key_ext: ${{ secrets.IBMCLOUD_API_KEY_GEStaging }}
+        PROFILE_ID: ${{ inputs.profileID }}
+        ACCOUNT_ID: ${{ inputs.accountID }}
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          submodules: true
+          # Clone all branches and history. This is needed for the upgrade tests
+          fetch-depth: 0
+
+      # Workaround for https://github.com/actions/runner/issues/2033
+      - name: Set ownership
+        run: |
+          chown -R $(id -u):$(id -g) $PWD
+
+      # Install dependencies
+      - name: Install dependencies
+        run: |
+          make dependency-install-darwin-linux
+
+      # run CRA scan
+      - name: CRA Scan
+        if: inputs.craTarget != ''
+        run: |
+          #!/bin/bash
+          set -e
+
+          export CRA_IGNORE_GOALS_FILE="$(pwd)/${{ inputs.craGoalIgnoreFile }}"
+          export CRA_IGNORE_RULES_FILE="$(pwd)/${{ inputs.craRuleIgnoreFile }}"
+
+          ENV_VARS="${{ inputs.craEnvironmentVariables }}"
+          if [ -n "$ENV_VARS" ]; then
+            IFS=',' read -ra ENV_VARS_ARRAY <<< "$ENV_VARS"
+            for i in "${ENV_VARS_ARRAY[@]}"; do
+              # Use an array to store the variable and value
+              ENV_VAR=(${i//=/ })
+              echo "Exporting environment variable: ${ENV_VAR[0]}"
+              export "${ENV_VAR[0]}"="${ENV_VAR[1]}"
+            done
+          else
+            echo "No input environment variables to export"
+          fi
+
+          # Install CRA plugin if not detected
+          if ! ibmcloud plugin show cra; then
+            ibmcloud plugin install cra -f
+          fi
+
+          # Run CRA scan for each target in the comma-separated list
+          IFS=',' read -ra CRA_TARGETS_ARRAY <<< "${{ inputs.craTarget }}"
+          for target in "${CRA_TARGETS_ARRAY[@]}"; do
+            if ${{ inputs.craSCCv2 }}; then
+              echo "CRA IGNORE FILE: ${CRA_IGNORE_RULES_FILE}"
+              ci/run-cra-scc-v2.sh "$target"
+            else
+              echo "CRA IGNORE FILE: ${CRA_IGNORE_GOALS_FILE}"
+              ci/run-cra.sh "$target"
+            fi
+          done
+
+      # run unit tests
+      - name: Unit Tests
+        run: |
+          make run-tests
+
+  set-commit-status-infra-success:
+    needs: [start-pipeline, Infrastructure_Tests]
+    if: ${{ success() }}
+    uses: ./.github/workflows/set-commit-status.yml
+    with:
+      github_token: ${{ github.token }}
+      state: "success"
+      description: "Complete - Success"
+      context: "Infrastructure_Tests"
+      sha: ${{ needs.start-pipeline.outputs.commit_id }}
+      target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      github_repository: ${{ github.repository }}
+
+  set-commit-status-infra-failure:
+    needs: [start-pipeline, Infrastructure_Tests]
+    if: ${{ failure() }}
+    uses: ./.github/workflows/set-commit-status.yml
+    with:
+      github_token: ${{ github.token }}
+      state: "failure"
+      description: "Complete - Failure"
+      context: "Infrastructure_Tests"
+      sha: ${{ needs.start-pipeline.outputs.commit_id }}
+      target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      github_repository: ${{ github.repository }}
+
+  set-commit-status-ci-success:
+    needs: [ start-pipeline, CI_Pipeline ]
+    if: ${{ success() }}
+    uses: daniel-test-bed/workflows/.github/workflows/set-commit-status.yml@main
+    with:
+      github_token: ${{ github.token }}
+      state: "success"
+      description: "Complete - Success"
+      context: "CI_Pipeline"
+      sha: ${{ needs.start-pipeline.outputs.commit_id }}
+      target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      github_repository: ${{ github.repository }}
+
+  set-commit-status-ci-failure:
+    needs: [ start-pipeline, CI_Pipeline ]
+    if: ${{ failure() }}
+    uses: ./.github/workflows/set-commit-status.yml
+    with:
+      github_token: ${{ github.token }}
+      state: "failure"
+      description: "Complete - Failure"
+      context: "CI_Pipeline"
+      sha: ${{ needs.start-pipeline.outputs.commit_id }}
+      target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      github_repository: ${{ github.repository }}
+
+  notify_contributor_and_label_required:
+    uses: ./.github/workflows/post-usage.yml
