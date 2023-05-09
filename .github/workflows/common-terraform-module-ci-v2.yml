@@ -66,7 +66,7 @@ jobs:
       github_token: ${{ github.token }}
       state: "pending"
       description: "Running"
-      context: "CI_Pipeline"
+      context: "call-terraform-ci-pipeline / CI Pipeline"
       sha: ${{needs.start-pipeline.outputs.commit_id}}
       target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       github_repository: ${{ github.repository }}
@@ -78,7 +78,7 @@ jobs:
       github_token: ${{ github.token }}
       state: "pending"
       description: "Running"
-      context: "Infrastructure_Tests"
+      context: "call-terraform-ci-pipeline / Infrastructure Test"
       sha: ${{needs.start-pipeline.outputs.commit_id}}
       target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       github_repository: ${{ github.repository }}
@@ -217,7 +217,7 @@ jobs:
       github_token: ${{ github.token }}
       state: "success"
       description: "Complete - Success"
-      context: "Infrastructure_Tests"
+      context: "call-terraform-ci-pipeline / Infrastructure Test"
       sha: ${{ needs.start-pipeline.outputs.commit_id }}
       target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       github_repository: ${{ github.repository }}
@@ -230,7 +230,7 @@ jobs:
       github_token: ${{ github.token }}
       state: "failure"
       description: "Complete - Failure"
-      context: "Infrastructure_Tests"
+      context: "call-terraform-ci-pipeline / Infrastructure Test"
       sha: ${{ needs.start-pipeline.outputs.commit_id }}
       target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       github_repository: ${{ github.repository }}
@@ -243,7 +243,7 @@ jobs:
       github_token: ${{ github.token }}
       state: "success"
       description: "Complete - Success"
-      context: "CI_Pipeline"
+      context: "call-terraform-ci-pipeline / CI Pipeline"
       sha: ${{ needs.start-pipeline.outputs.commit_id }}
       target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       github_repository: ${{ github.repository }}
@@ -256,7 +256,7 @@ jobs:
       github_token: ${{ github.token }}
       state: "failure"
       description: "Complete - Failure"
-      context: "CI_Pipeline"
+      context: "call-terraform-ci-pipeline / CI Pipeline"
       sha: ${{ needs.start-pipeline.outputs.commit_id }}
       target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       github_repository: ${{ github.repository }}
