@@ -41,130 +41,18 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  CI_Pipeline:
-    name: CI Pipeline
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    # Don't run job on draft PRs
-#    if: github.event.pull_request.draft == false   # TODO: Enable after consuming pipelines have been updated
-    defaults:
-      run:
-        shell: bash
-    container:
-      image: icr.io/goldeneye_images/goldeneye-ci-image:stable
-      env:
-        TF_VAR_ibmcloud_api_key: ${{ secrets.IBMCLOUD_API_KEY }}
-        IC_API_KEY: ${{ secrets.IBMCLOUD_API_KEY }}
-        GH_TOKEN: ${{ secrets.GH_TOKEN }}
+  trigger_ci:
+    uses: ./.github/workflows/ci-pipeline.yml
+    with:
+      make_test_command: run-test
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.GH_TOKEN }}
-          submodules: true
-          # Clone all branches and history. This is needed for the upgrade tests
-          fetch-depth: 0
-
-      # Workaround for https://github.com/actions/runner/issues/2033
-      - name: Set ownership
-        run: |
-          chown -R $(id -u):$(id -g) $PWD
-
-      # Install dependencies
-      - name: Install dependencies
-        run: |
-          make dependency-install-darwin-linux
-
-      # Check for pre-commit updates if it is a renovate PR
-      - name: Renovate sweeper
-        run: |
-          make renovate-sweeper
-
-      # run pre-commit against all files
-      - name: Pre-commit
-        run: |
-          make pre-commit
-
-  Infrastructure_Tests:
-    name: Infrastructure Test
-    runs-on: ubuntu-latest
-    # Don't run job on draft PRs
-#    if: github.event.pull_request.draft == false  # TODO: Enable after consuming pipelines have been updated
-    defaults:
-      run:
-        shell: bash
-    container:
-      image: icr.io/goldeneye_images/goldeneye-ci-image:stable
-      env:
-        TF_VAR_ibmcloud_api_key: ${{ secrets.IBMCLOUD_API_KEY }}
-        IC_API_KEY: ${{ secrets.IBMCLOUD_API_KEY }}
-        TOOLCHAIN_ID: ${{ secrets.IAC_GE_OPS_TOOLCHAIN_ID }}
-        MZ_INGESTION_KEY: ${{ secrets.MZ_INGESTION_KEY }}
-        TF_VAR_ibmcloud_api_key_ext: ${{ secrets.IBMCLOUD_API_KEY_GEStaging }}
-        PROFILE_ID: ${{ inputs.profileID }}
-        ACCOUNT_ID: ${{ inputs.accountID }}
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.GH_TOKEN }}
-          submodules: true
-          # Clone all branches and history. This is needed for the upgrade tests
-          fetch-depth: 0
-
-      # Workaround for https://github.com/actions/runner/issues/2033
-      - name: Set ownership
-        run: |
-          chown -R $(id -u):$(id -g) $PWD
-
-      # Install dependencies
-      - name: Install dependencies
-        run: |
-          make dependency-install-darwin-linux
-
-      # run CRA scan
-      - name: CRA Scan
-        if: inputs.craTarget != ''
-        run: |
-          #!/bin/bash
-          set -e
-
-          export CRA_IGNORE_GOALS_FILE="$(pwd)/${{ inputs.craGoalIgnoreFile }}"
-          export CRA_IGNORE_RULES_FILE="$(pwd)/${{ inputs.craRuleIgnoreFile }}"
-
-          ENV_VARS="${{ inputs.craEnvironmentVariables }}"
-          if [ -n "$ENV_VARS" ]; then
-            IFS=',' read -ra ENV_VARS_ARRAY <<< "$ENV_VARS"
-            for i in "${ENV_VARS_ARRAY[@]}"; do
-              # Use an array to store the variable and value
-              ENV_VAR=(${i//=/ })
-              echo "Exporting environment variable: ${ENV_VAR[0]}"
-              export "${ENV_VAR[0]}"="${ENV_VAR[1]}"
-            done
-          else
-            echo "No input environment variables to export"
-          fi
-
-          # Install CRA plugin if not detected
-          if ! ibmcloud plugin show cra; then
-            ibmcloud plugin install cra -f
-          fi
-
-          # Run CRA scan for each target in the comma-separated list
-          IFS=',' read -ra CRA_TARGETS_ARRAY <<< "${{ inputs.craTarget }}"
-          for target in "${CRA_TARGETS_ARRAY[@]}"; do
-            if ${{ inputs.craSCCv2 }}; then
-              echo "CRA IGNORE FILE: ${CRA_IGNORE_RULES_FILE}"
-              ci/run-cra-scc-v2.sh "$target"
-            else
-              echo "CRA IGNORE FILE: ${CRA_IGNORE_GOALS_FILE}"
-              ci/run-cra.sh "$target"
-            fi
-          done
-
-      # run unit tests
-      - name: Unit Tests
-        run: |
-          make run-tests
+  trigger_infra_tests:
+    uses: ./.github/workflows/terraform-test-pipeline.yml
+    with:
+      craTarget: ${{ inputs.craTarget }}
+      craGoalIgnoreFile: ${{ inputs.craGoalIgnoreFile }}
+      craRuleIgnoreFile: ${{ inputs.craRuleIgnoreFile }}
+      craSCCv2: ${{ inputs.craSCCv2 }}
+      accountID: ${{ inputs.accountID }}
+      profileID: ${{ inputs.profileID }}
+      craEnvironmentVariables: ${{ inputs.craEnvironmentVariables }}

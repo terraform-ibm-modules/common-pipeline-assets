@@ -13,35 +13,7 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  CI_Pipeline:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.GH_TOKEN }}
-          submodules: true
-
-      # Workaround for https://github.com/actions/runner/issues/2033
-      - name: Set ownership
-        run: |
-          chown -R $(id -u):$(id -g) $PWD
-
-      # Setup tools
-      - name: Setup tools
-        run: |
-          pip install pre-commit
-          pre-commit install
-
-      # Check for pre-commit updates if it is a renovate PR
-      - name: Renovate sweeper
-        run: make renovate-sweeper
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      # run pre-commit against all files
-      - name: Pre-commit
-        run: make pre-commit-no-terraform
+  trigger_ci:
+    uses: ./.github/workflows/ci-pipeline.yml
+    with:
+      make_command: pre-commit-no-terraform

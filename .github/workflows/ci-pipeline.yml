@@ -1,0 +1,62 @@
+# Controls when the workflow will run
+on:
+  workflow_call:
+    inputs:
+      make_command:
+        description: Make command to run eg. pre-commit-no-terraform, pre-commit. Default pre-commit
+        type: string
+        required: false
+        default: pre-commit
+      make_test_command:
+        description: Make test command to run eg. run-test, run-go-module-tests. Skip if this is not set
+        type: string
+        required: false
+
+jobs:
+  CI_Pipeline:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    container:
+      image: icr.io/goldeneye_images/goldeneye-ci-image:stable
+      env:
+        TF_VAR_ibmcloud_api_key: ${{ secrets.IBMCLOUD_API_KEY }}
+        IC_API_KEY: ${{ secrets.IBMCLOUD_API_KEY }}
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          submodules: true
+
+      # Workaround for https://github.com/actions/runner/issues/2033
+      - name: Set ownership
+        run: |
+          chown -R $(id -u):$(id -g) $PWD
+
+      # Setup tools
+      - name: Setup tools
+        run: |
+          pip install pre-commit
+          pre-commit install
+
+      # Check for pre-commit updates if it is a renovate PR
+      - name: Renovate sweeper
+        run: make renovate-sweeper
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      # run pre-commit against all files
+      - name: Pre-commit
+        run: make ${{ inputs.make_command }}
+
+      # Run tests
+      - name: Run Tests
+        if:  ${{ inputs.make_test_command }}
+        run: |
+          make  ${{ inputs.make_test_command }}
