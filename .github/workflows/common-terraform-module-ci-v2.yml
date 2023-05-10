@@ -261,5 +261,5 @@ jobs:
       target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       github_repository: ${{ github.repository }}
 
-  # notify_contributor_and_label_required:
-  #   uses: ./.github/workflows/post-usage.yml
+  notify_contributor_and_label_required:
+    uses: ./.github/workflows/post-usage.yml

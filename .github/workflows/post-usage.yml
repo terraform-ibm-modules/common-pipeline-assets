@@ -2,13 +2,13 @@ on:
   workflow_call:
 
 jobs:
-  Notify-Contributor-and-Label-Required:
+  Notify-Contributor-Requirements:
     runs-on: ubuntu-latest
     if: ${{ github.event.issue.pull_request && github.event.comment.body == '/run pipeline' && github.event.comment.author_association != 'CONTRIBUTOR' }}
     steps:
       - name: Post Comment
-        uses: peter-evans/create-or-update-comment@v3.0.1
-        with:
-          issue-number: ${{ github.event.issue.number }}
-          body: |
-            @${{ github.actor }} you must be a collaborator in order to trigger the pipeline.
+        run: |
+          curl -X POST -H "Authorization: Bearer ${{secrets.GITHUB_TOKEN}}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          https://api.github.com/repos/${{github.repository}}/issues/${{github.event.issue.number}}/comments \
+          -d "{\"body\": \"@${{github.actor}} you must be a collaborator in order to trigger the pipeline.\"}"
