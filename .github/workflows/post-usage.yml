@@ -1,0 +1,14 @@
+on:
+  workflow_call:
+
+jobs:
+  Notify-Contributor-and-Label-Required:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.issue.pull_request && github.event.comment.body == '/run pipeline' && github.event.comment.author_association != 'CONTRIBUTOR' }}
+    steps:
+      - name: Post Comment
+        uses: peter-evans/create-or-update-comment@v3.0.1
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            @${{ github.actor }} you must be a collaborator in order to trigger the pipeline.
