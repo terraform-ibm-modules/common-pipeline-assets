@@ -48,8 +48,6 @@ jobs:
   Infrastructure_Tests:
     name: Infrastructure Test
     runs-on: ubuntu-latest
-    # Don't run job on draft PRs
-    #    if: github.event.pull_request.draft == false  # TODO: Enable after consuming pipelines have been updated
     defaults:
       run:
         shell: bash
