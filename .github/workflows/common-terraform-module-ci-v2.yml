@@ -115,7 +115,7 @@ jobs:
       github_repository: ${{ github.repository }}
 
   set-commit-status-infra-failure:
-    needs: [start-pipeline, Infrastructure_Tests]
+    needs: [start-pipeline, trigger_infra_tests]
     if: ${{ failure() }}
     uses: ./.github/workflows/set-commit-status.yml
     with:
