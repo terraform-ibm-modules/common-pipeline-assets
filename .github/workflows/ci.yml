@@ -26,17 +26,17 @@ jobs:
             | jq -r ".head.sha")
           echo "COMMIT_ID=$commit_id" >> "$GITHUB_OUTPUT"
 
-    set-commit-status-ci-running:
-      uses: ./.github/workflows/set-commit-status.yml
-      needs: [ start-pipeline ]
-      with:
-        github_token: ${{ github.token }}
-        state: "pending"
-        description: "Running"
-        context: "CI Pipeline"
-        sha: ${{needs.start-pipeline.outputs.commit_id}}
-        target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-        github_repository: ${{ github.repository }}
+  set-commit-status-ci-running:
+    uses: ./.github/workflows/set-commit-status.yml
+    needs: [ start-pipeline ]
+    with:
+      github_token: ${{ github.token }}
+      state: "pending"
+      description: "Running"
+      context: "CI Pipeline"
+      sha: ${{needs.start-pipeline.outputs.commit_id}}
+      target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      github_repository: ${{ github.repository }}
 
   trigger_ci:
     needs: [ start-pipeline, set-commit-status-ci-running ]
