@@ -58,12 +58,7 @@ jobs:
           if [ ! -d "./node_modules" ]; then ln -s /tmp/node_modules node_modules; fi
           bash -c "npx semantic-release --no-ci";
 
-      - id: versionNumber
-        run: echo "::set-output name=version::$SEMVER_VERSION"
-
       - name: Sign Tag
-        env:
-          SEMVER_VERSION: ${{ steps.versionNumber.outputs.version }}
         run: |
           if [ -z "$SEMVER_VERSION" ]
           then

@@ -7,7 +7,5 @@ on:
 
 jobs:
   call-release-pipeline:
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') }}
-    # purposely locking into main branch here to avoid circular dependency
     uses: terraform-ibm-modules/common-pipeline-assets/.github/workflows/common-release.yml@main
     secrets: inherit
