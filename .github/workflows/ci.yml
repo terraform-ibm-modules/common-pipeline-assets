@@ -73,7 +73,7 @@ jobs:
 
 
   set-commit-status-ci-success:
-    needs: [ start-pipeline, trigger_ci ]
+    needs: [ start-pipeline, CI_Pipeline ]
     if: ${{ success() }}
     uses: ./.github/workflows/set-commit-status.yml
     with:
@@ -86,7 +86,7 @@ jobs:
       github_repository: ${{ github.repository }}
 
   set-commit-status-ci-failure:
-    needs: [ start-pipeline, trigger_ci ]
+    needs: [ start-pipeline, CI_Pipeline ]
     if: ${{ failure() }}
     uses: ./.github/workflows/set-commit-status.yml
     with:
