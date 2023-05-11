@@ -43,11 +43,13 @@ on:
 jobs:
   trigger_ci:
     uses: ./.github/workflows/ci-pipeline.yml
+    secrets: inherit
     with:
       make_test_command: run-test
 
   trigger_infra_tests:
     uses: ./.github/workflows/terraform-test-pipeline.yml
+    secrets: inherit
     with:
       craTarget: ${{ inputs.craTarget }}
       craGoalIgnoreFile: ${{ inputs.craGoalIgnoreFile }}

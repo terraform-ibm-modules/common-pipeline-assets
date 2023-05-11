@@ -7,6 +7,7 @@ on:
 jobs:
   trigger_ci:
     uses: ./.github/workflows/ci-pipeline.yml
+    secrets: inherit
     with:
       make_command: pre-commit-no-terraform
       make_test_command: run-go-module-tests

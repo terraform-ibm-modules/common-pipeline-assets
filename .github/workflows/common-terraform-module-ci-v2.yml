@@ -86,11 +86,13 @@ jobs:
   trigger_ci:
     needs: [set-commit-status-ci-running, set-commit-status-infra-running]
     uses: ./.github/workflows/ci-pipeline.yml
+    secrets: inherit
     with:
       make_test_command: run-test
 
   trigger_infra_tests:
     needs: [trigger_ci]
+    secrets: inherit
     uses: ./.github/workflows/terraform-test-pipeline.yml
     with:
       craTarget: ${{ inputs.craTarget }}
