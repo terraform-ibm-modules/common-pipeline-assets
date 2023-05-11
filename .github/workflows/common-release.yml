@@ -59,7 +59,9 @@ jobs:
           bash -c "npx semantic-release --no-ci";
 
       - id: versionNumber
-        run: echo "version=$SEMVER_VERSION" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "version=$SEMVER_VERSION"
+          echo "version=$SEMVER_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Sign Tag
         env:
