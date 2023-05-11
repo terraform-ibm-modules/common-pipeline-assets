@@ -46,7 +46,7 @@ jobs:
   set-commit-status-ci-success:
     needs: [ start-pipeline, trigger_ci ]
     if: ${{ success() }}
-    uses: daniel-test-bed/workflows/.github/workflows/set-commit-status.yml@main
+    uses: ./.github/workflows/set-commit-status.yml
     with:
       github_token: ${{ github.token }}
       state: "success"
