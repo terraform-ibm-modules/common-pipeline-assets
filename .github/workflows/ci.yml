@@ -1,6 +1,6 @@
 name: CI-Pipeline
 
-# Controls when the workflow will run
+# Controls when the workflow will run, when comment is created
 on:
   issue_comment:
     types:
