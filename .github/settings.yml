@@ -7,13 +7,6 @@
 
 _extends: repo-settings:.github/common-pipeline-settings.yml
 
-# repo-specific settings
-
-required_status_checks:
-  strict: true
-  contexts:
-    - "CI Pipeline"
-
 repository:
   # See https://terraform-ibm-modules.github.io/documentation/#/implementation-guidelines?id=module-names-and-descriptions
 

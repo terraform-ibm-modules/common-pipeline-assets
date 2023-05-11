@@ -5,45 +5,68 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  CI_Pipeline:
-    # The type of runner that the job will run on
+  start-pipeline:
+    # Only start if the run pipeline was posted by a collaborator
+    if: ${{ github.event.issue.pull_request && github.event.comment.body == '/run pipeline' && github.event.comment.author_association=='CONTRIBUTOR' }}
+    name: Get Commit ID
     runs-on: ubuntu-latest
-    container:
-      image: icr.io/goldeneye_images/goldeneye-ci-image:stable
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
+    outputs:
+      commit_id: ${{ steps.commit_id.outputs.COMMIT_ID }}
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.GH_TOKEN }}
-          submodules: true
-          # Clone all branches and history. This is needed for the upgrade tests
-          fetch-depth: 0
-
-      # Workaround for https://github.com/actions/runner/issues/2033
-      - name: Set ownership
+      - name: Get Latest Commit ID
+        id: commit_id
         run: |
-          chown -R $(id -u):$(id -g) $PWD
+          pull_request_url=$(jq -r ".issue.pull_request.url" "$GITHUB_EVENT_PATH")
+          commit_id=$(curl -s -H "Authorization: Bearer ${{ github.token }}" \
+            --retry 3 \
+            "$pull_request_url" \
+            | jq -r ".head.sha")
+          echo "COMMIT_ID=$commit_id" >> "$GITHUB_OUTPUT"
 
-      # Install dependencies
-      - name: Install dependencies
-        run: |
-          make dependency-install-darwin-linux
+  set-commit-status-ci-running:
+    uses: ./.github/workflows/set-commit-status.yml
+    needs: [ start-pipeline ]
+    with:
+      github_token: ${{ github.token }}
+      state: "pending"
+      description: "Running"
+      context: "CI Pipeline"
+      sha: ${{needs.start-pipeline.outputs.commit_id}}
+      target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      github_repository: ${{ github.repository }}
 
-      # Check for pre-commit updates if it is a renovate PR
-      - name: Renovate sweeper
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          make renovate-sweeper
+  trigger_ci:
+    uses: ./.github/workflows/ci-pipeline.yml
+    secrets: inherit
+    with:
+      make_command: pre-commit-no-terraform
+      make_test_command: run-go-module-tests
 
-      # run pre-commit against all files
-      - name: Pre-commit
-        run: |
-          make pre-commit-no-terraform
+  set-commit-status-ci-success:
+    needs: [ start-pipeline, trigger_ci ]
+    if: ${{ success() }}
+    uses: ./.github/workflows/set-commit-status.yml
+    with:
+      github_token: ${{ github.token }}
+      state: "success"
+      description: "Complete - Success"
+      context: "CI Pipeline"
+      sha: ${{ needs.start-pipeline.outputs.commit_id }}
+      target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      github_repository: ${{ github.repository }}
 
-      # Run tests
-      - name: Run Tests
-        run: |
-          make run-go-module-tests
+    set-commit-status-ci-failure:
+      needs: [ start-pipeline, trigger_ci ]
+      if: ${{ failure() }}
+      uses: ./.github/workflows/set-commit-status.yml
+      with:
+        github_token: ${{ github.token }}
+        state: "failure"
+        description: "Complete - Failure"
+        context: "CI Pipeline"
+        sha: ${{ needs.start-pipeline.outputs.commit_id }}
+        target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        github_repository: ${{ github.repository }}
+
+    notify_contributor_and_label_required:
+      uses: ./.github/workflows/post-usage.yml
