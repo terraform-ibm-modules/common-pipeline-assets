@@ -1,20 +1,17 @@
 name: CI-Pipeline
 
-# Controls when the workflow will run
+# Controls when the workflow will run, when comment is created
 on:
-  # Triggers the workflow on push or pull request events but only for the main branch
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+  issue_comment:
+    types:
+      - created
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   trigger_ci:
     uses: ./.github/workflows/ci-pipeline.yml
+    # Only start if the run pipeline was posted by a collaborator
+    if: ${{ github.event.issue.pull_request && github.event.comment.body == '/run pipeline' && github.event.comment.author_association=='CONTRIBUTOR' }}
     secrets: inherit
     with:
       make_command: pre-commit-no-terraform

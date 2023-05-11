@@ -42,7 +42,7 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   start-pipeline:
-    # Only start if the issue contains the lable ok-to-test and the run pipeline was posted by a collaborator
+    # Only start if the run pipeline was posted by a collaborator
     if: ${{ github.event.issue.pull_request && github.event.comment.body == '/run pipeline' && github.event.comment.author_association=='CONTRIBUTOR' }}
     name: Get Commit ID
     runs-on: ubuntu-latest
