@@ -2,6 +2,10 @@
 on:
   workflow_call:
     inputs:
+      checkout_commit:
+        description: Commit ID you want to checkout
+        type: string
+        required: true
       make_command:
         description: Make command to run eg. pre-commit-no-terraform, pre-commit. Default pre-commit
         type: string
@@ -33,6 +37,7 @@ jobs:
         with:
           token: ${{ secrets.GH_TOKEN }}
           submodules: true
+          ref: ${{ inputs.checkout_commit }}
 
       # Workaround for https://github.com/actions/runner/issues/2033
       - name: Set ownership

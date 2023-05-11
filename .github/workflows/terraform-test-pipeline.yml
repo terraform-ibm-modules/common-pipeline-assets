@@ -2,6 +2,10 @@
 on:
   workflow_call:
     inputs:
+      checkout_commit:
+        description: Commit ID you want to checkout
+        type: string
+        required: true
       craTarget:
         type: string
         description: "Target directory for CRA scan(accepts comma seperated list for multiple scans). If not provided CRA Scan will not be run"
@@ -65,6 +69,7 @@ jobs:
         with:
           token: ${{ secrets.GH_TOKEN }}
           submodules: true
+          ref: ${{ inputs.checkout_commit }}
           # Clone all branches and history. This is needed for the upgrade tests
           fetch-depth: 0
 
