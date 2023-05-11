@@ -18,6 +18,6 @@ For example, here's how the `common-terraform-module-ci` workflow is called in t
 ```yaml
 jobs:
   call-terraform-ci-pipeline:
-    uses: terraform-ibm-modules/common-pipeline-assets/.github/workflows/common-terraform-module-ci.yml@v1.0.0
+    uses: terraform-ibm-modules/common-pipeline-assets/.github/workflows/common-terraform-module-ci.yml@v1.11.1
     secrets: inherit
 ```
