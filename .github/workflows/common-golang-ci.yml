@@ -5,22 +5,23 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # Only start if the run pipeline was posted by a collaborator
-  if: ${{ github.event.issue.pull_request && github.event.comment.body == '/run pipeline' && github.event.comment.author_association=='CONTRIBUTOR' }}
-  name: Get Commit ID
-  runs-on: ubuntu-latest
-  outputs:
-    commit_id: ${{ steps.commit_id.outputs.COMMIT_ID }}
-  steps:
-    - name: Get Latest Commit ID
-      id: commit_id
-      run: |
-        pull_request_url=$(jq -r ".issue.pull_request.url" "$GITHUB_EVENT_PATH")
-        commit_id=$(curl -s -H "Authorization: Bearer ${{ github.token }}" \
-          --retry 3 \
-          "$pull_request_url" \
-          | jq -r ".head.sha")
-        echo "COMMIT_ID=$commit_id" >> "$GITHUB_OUTPUT"
+  start-pipeline:
+    # Only start if the run pipeline was posted by a collaborator
+    if: ${{ github.event.issue.pull_request && github.event.comment.body == '/run pipeline' && github.event.comment.author_association=='CONTRIBUTOR' }}
+    name: Get Commit ID
+    runs-on: ubuntu-latest
+    outputs:
+      commit_id: ${{ steps.commit_id.outputs.COMMIT_ID }}
+    steps:
+      - name: Get Latest Commit ID
+        id: commit_id
+        run: |
+          pull_request_url=$(jq -r ".issue.pull_request.url" "$GITHUB_EVENT_PATH")
+          commit_id=$(curl -s -H "Authorization: Bearer ${{ github.token }}" \
+            --retry 3 \
+            "$pull_request_url" \
+            | jq -r ".head.sha")
+          echo "COMMIT_ID=$commit_id" >> "$GITHUB_OUTPUT"
 
   set-commit-status-ci-running:
     uses: ./.github/workflows/set-commit-status.yml
