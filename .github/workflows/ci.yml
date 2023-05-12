@@ -32,6 +32,7 @@ jobs:
     uses: ./.github/workflows/ci-pipeline.yml
     secrets: inherit
     with:
+      checkout_commit: ${{ needs.start-pipeline.outputs.commit_id }}
       make_command: pre-commit-no-terraform
 
   set-commit-status-ci-success:
