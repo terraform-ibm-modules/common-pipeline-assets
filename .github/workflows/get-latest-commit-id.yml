@@ -1,0 +1,27 @@
+on:
+  workflow_call:
+    inputs:
+      github_token:
+        description: 'Personal access token used to authenticate with the GitHub API. Defaults to pipeline token'
+        required: false
+        type: string
+    outputs:
+      commit_id:
+        description: "The latest commit id"
+        value: ${{ jobs.get-commit-id.outputs.commit_id }}
+
+jobs:
+  get-commit-id:
+    runs-on: ubuntu-latest
+    outputs:
+      commit_id: ${{ steps.commit_id.outputs.COMMIT_ID }}
+    steps:
+      - name: Get Latest Commit ID
+        id: commit_id
+        run: |
+          pull_request_url=$(jq -r ".issue.pull_request.url" "$GITHUB_EVENT_PATH")
+          commit_id=$(curl -s -H "Authorization: Bearer ${{ github.token }}" \
+            --retry 3 \
+            "$pull_request_url" \
+            | jq -r ".head.sha")
+          echo "COMMIT_ID=$commit_id" >> "$GITHUB_OUTPUT"

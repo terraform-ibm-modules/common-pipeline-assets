@@ -42,15 +42,19 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   trigger_ci:
+    needs: [ start-pipeline ]
     uses: ./.github/workflows/ci-pipeline.yml
     secrets: inherit
     with:
+      checkout_commit: ${{ needs.start-pipeline.outputs.commit_id }}
       make_test_command: run-test
 
   trigger_infra_tests:
+    needs:  [ start-pipeline ]
     uses: ./.github/workflows/terraform-test-pipeline.yml
     secrets: inherit
     with:
+      checkout_commit: ${{ needs.start-pipeline.outputs.commit_id }}
       craTarget: ${{ inputs.craTarget }}
       craGoalIgnoreFile: ${{ inputs.craGoalIgnoreFile }}
       craRuleIgnoreFile: ${{ inputs.craRuleIgnoreFile }}

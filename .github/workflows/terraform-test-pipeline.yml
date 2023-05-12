@@ -2,6 +2,10 @@
 on:
   workflow_call:
     inputs:
+      checkout_commit:
+        description: Commit ID you want to checkout
+        type: string
+        required: true
       craTarget:
         type: string
         description: "Target directory for CRA scan(accepts comma seperated list for multiple scans). If not provided CRA Scan will not be run"
@@ -44,8 +48,6 @@ jobs:
   Infrastructure_Tests:
     name: Infrastructure Test
     runs-on: ubuntu-latest
-    # Don't run job on draft PRs
-    #    if: github.event.pull_request.draft == false  # TODO: Enable after consuming pipelines have been updated
     defaults:
       run:
         shell: bash
@@ -65,6 +67,7 @@ jobs:
         with:
           token: ${{ secrets.GH_TOKEN }}
           submodules: true
+          ref: ${{ inputs.checkout_commit }}
           # Clone all branches and history. This is needed for the upgrade tests
           fetch-depth: 0
 

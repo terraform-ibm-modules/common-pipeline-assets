@@ -7,21 +7,10 @@ on:
 jobs:
   start-pipeline:
     # Only start if the run pipeline was posted by a collaborator
-    if: ${{ github.event.issue.pull_request && github.event.comment.body == '/run pipeline' && github.event.comment.author_association=='CONTRIBUTOR' }}
-    name: Get Commit ID
-    runs-on: ubuntu-latest
-    outputs:
-      commit_id: ${{ steps.commit_id.outputs.COMMIT_ID }}
-    steps:
-      - name: Get Latest Commit ID
-        id: commit_id
-        run: |
-          pull_request_url=$(jq -r ".issue.pull_request.url" "$GITHUB_EVENT_PATH")
-          commit_id=$(curl -s -H "Authorization: Bearer ${{ github.token }}" \
-            --retry 3 \
-            "$pull_request_url" \
-            | jq -r ".head.sha")
-          echo "COMMIT_ID=$commit_id" >> "$GITHUB_OUTPUT"
+    if: ${{ github.event.issue.pull_request && github.event.comment.body == '/run pipeline' && github.event.comment.author_association=='CONTRIBUTOR'}}
+    uses: ./.github/workflows/get-latest-commit-id.yml
+    with:
+      github_token: ${{ github.token }}
 
   set-commit-status-ci-running:
     uses: ./.github/workflows/set-commit-status.yml
@@ -31,14 +20,16 @@ jobs:
       state: "pending"
       description: "Running"
       context: "CI Pipeline"
-      sha: ${{needs.start-pipeline.outputs.commit_id}}
+      sha: ${{ needs.start-pipeline.outputs.commit_id }}
       target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       github_repository: ${{ github.repository }}
 
   trigger_ci:
+    needs: [ start-pipeline ]
     uses: ./.github/workflows/ci-pipeline.yml
     secrets: inherit
     with:
+      checkout_commit: ${{ needs.start-pipeline.outputs.commit_id }}
       make_command: pre-commit-no-terraform
       make_test_command: run-go-module-tests
 
@@ -55,18 +46,18 @@ jobs:
       target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       github_repository: ${{ github.repository }}
 
-    set-commit-status-ci-failure:
-      needs: [ start-pipeline, trigger_ci ]
-      if: ${{ failure() }}
-      uses: ./.github/workflows/set-commit-status.yml
-      with:
-        github_token: ${{ github.token }}
-        state: "failure"
-        description: "Complete - Failure"
-        context: "CI Pipeline"
-        sha: ${{ needs.start-pipeline.outputs.commit_id }}
-        target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-        github_repository: ${{ github.repository }}
+  set-commit-status-ci-failure:
+    needs: [ start-pipeline, trigger_ci ]
+    if: ${{ failure() }}
+    uses: ./.github/workflows/set-commit-status.yml
+    with:
+      github_token: ${{ github.token }}
+      state: "failure"
+      description: "Complete - Failure"
+      context: "CI Pipeline"
+      sha: ${{ needs.start-pipeline.outputs.commit_id }}
+      target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      github_repository: ${{ github.repository }}
 
-    notify_contributor_and_label_required:
-      uses: ./.github/workflows/post-usage.yml
+  notify_contributor_and_label_required:
+    uses: ./.github/workflows/post-usage.yml
