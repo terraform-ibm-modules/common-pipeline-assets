@@ -5,14 +5,34 @@ on:
     inputs:
       craTarget:
         type: string
-        description: "Target directory for CRA scan. If not provided CRA Scan will not be run"
+        description: "Target directory for CRA scan(accepts comma seperated list for multiple scans). If not provided CRA Scan will not be run"
         required: false
         default: ""
       craGoalIgnoreFile:
         type: string
-        description: "CRA Ignore file to use. If not provided checks repo root directory for cra-tf-validate-ignore-goals.json"
+        description: "CRA Ignore file to use(Used for SCC v1). If not provided checks repo root directory for cra-tf-validate-ignore-goals.json"
         required: false
         default: "cra-tf-validate-ignore-goals.json"
+      craRuleIgnoreFile:
+        type: string
+        description: "CRA Ignore file to use (Used for SCC v2). If not provided checks repo root directory for cra-tf-validate-ignore-rules.json"
+        required: false
+        default: "cra-tf-validate-ignore-rules.json"
+      craSCCv2:
+        type: boolean
+        description: "Use SCCv2 CRA run-cra-scc-v2.sh"
+        required: false
+        default: false
+      accountID:
+        type: string
+        description: "CRA scc v2 needs the IBM Cloud Account ID as Input (Default GeDev)"
+        required: false
+        default: "abac0df06b644a9cabc6e44f55b3880e"
+      profileID:
+        type: string
+        description: "CRA scc v2 needs the Pofile ID as Input. This is the profile ID you want to scan with. Note IDs are region specific ensure you use a US one (Default: US IBM Cloud for Financial Services 1.2.0)"
+        required: false
+        default: "4c67f813-8723-4029-8b44-848fb989899e"
       craEnvironmentVariables:
         type: string
         description: "An optional list of environment variables to set for CRA, in comma seperated format 'VAR1=value1,VAR2=value2'. This can be used to provide TF_VAR's"
@@ -79,6 +99,8 @@ jobs:
         TOOLCHAIN_ID: ${{ secrets.IAC_GE_OPS_TOOLCHAIN_ID }}
         MZ_INGESTION_KEY: ${{ secrets.MZ_INGESTION_KEY }}
         TF_VAR_ibmcloud_api_key_ext: ${{ secrets.IBMCLOUD_API_KEY_GEStaging }}
+        PROFILE_ID: ${{ inputs.profileID }}
+        ACCOUNT_ID: ${{ inputs.accountID }}
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
@@ -106,7 +128,8 @@ jobs:
           set -e
 
           export CRA_IGNORE_GOALS_FILE="$(pwd)/${{ inputs.craGoalIgnoreFile }}"
-          echo "CRA IGNORE FILE: ${CRA_IGNORE_GOALS_FILE}"
+          export CRA_IGNORE_RULES_FILE="$(pwd)/${{ inputs.craRuleIgnoreFile }}"
+
           ENV_VARS="${{ inputs.craEnvironmentVariables }}"
           if [ -n "$ENV_VARS" ]; then
             IFS=',' read -ra ENV_VARS_ARRAY <<< "$ENV_VARS"
@@ -122,10 +145,20 @@ jobs:
 
           # Install CRA plugin if not detected
           if ! ibmcloud plugin show cra; then
-            ibmcloud plugin install cra -f -v 1.2.0
+            ibmcloud plugin install cra -f
           fi
 
-          ci/run-cra.sh "${{ inputs.craTarget }}"
+          # Run CRA scan for each target in the comma-separated list
+          IFS=',' read -ra CRA_TARGETS_ARRAY <<< "${{ inputs.craTarget }}"
+          for target in "${CRA_TARGETS_ARRAY[@]}"; do
+            if ${{ inputs.craSCCv2 }}; then
+              echo "CRA IGNORE FILE: ${CRA_IGNORE_RULES_FILE}"
+              ci/run-cra-scc-v2.sh "$target"
+            else
+              echo "CRA IGNORE FILE: ${CRA_IGNORE_GOALS_FILE}"
+              ci/run-cra.sh "$target"
+            fi
+          done
 
       # run unit tests
       - name: Unit Tests
