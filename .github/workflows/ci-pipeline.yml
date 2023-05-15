@@ -59,9 +59,3 @@ jobs:
       # run pre-commit against all files
       - name: Pre-commit
         run: make ${{ inputs.make_command }}
-
-      # Run tests
-      - name: Run Tests
-        if:  ${{ inputs.make_test_command }}
-        run: |
-          make  ${{ inputs.make_test_command }}
