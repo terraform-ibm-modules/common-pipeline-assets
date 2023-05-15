@@ -46,7 +46,7 @@ jobs:
     secrets: inherit
     with:
       checkout_commit: ${{ needs.start-pipeline.outputs.commit_id }}
-      make_test_command: run-test
+      make_test_command: run-tests
 
   trigger_infra_tests:
     uses: ./.github/workflows/terraform-test-pipeline.yml
