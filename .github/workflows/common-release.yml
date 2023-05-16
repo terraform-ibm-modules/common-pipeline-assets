@@ -11,7 +11,7 @@ on:
 
       sign:
         required: false
-        type: bool
+        type: boolean
         description: "Sign tags"
         default: true
 
