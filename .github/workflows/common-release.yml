@@ -9,6 +9,12 @@ on:
         description: "Optional prefix to add before version number"
         default: "v"
 
+      sign:
+        required: false
+        type: bool
+        description: "Sign tags"
+        default: true
+
 jobs:
   Semantic_Release:
     # The type of runner that the job will run on
@@ -64,6 +70,7 @@ jobs:
           echo "version=$SEMVER_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Sign Tag
+        if: ${{ inputs.sign == true }}
         env:
           SEMVER_VERSION: ${{steps.versionNumber.outputs.version}}
         run: |
