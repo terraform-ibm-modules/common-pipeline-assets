@@ -44,7 +44,7 @@ jobs:
   start-pipeline:
     # Only start if the run pipeline was posted by a collaborator
     if: ${{ github.event.issue.pull_request && github.event.comment.body == '/run pipeline' && github.event.comment.author_association=='CONTRIBUTOR' }}
-    uses: ./.github/workflows/get-latest-commit-id.yml
+    uses: ./.github/workflows/get-latest-pr-details.yml
     with:
       github_token: ${{ github.token }}
 
@@ -93,6 +93,8 @@ jobs:
       accountID: ${{ inputs.accountID }}
       profileID: ${{ inputs.profileID }}
       craEnvironmentVariables: ${{ inputs.craEnvironmentVariables }}
+      GITHUB_BASE_REF: ${{ needs.start-pipeline.outputs.target_branch}}
+      GITHUB_HEAD_REF: ${{ needs.start-pipeline.outputs.source_branch}}
 
   set-commit-status-infra-success:
     needs: [start-pipeline, trigger_infra_tests]

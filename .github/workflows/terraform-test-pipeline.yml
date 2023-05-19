@@ -41,7 +41,14 @@ on:
         description: "An optional list of environment variables to set for CRA, in comma seperated format 'VAR1=value1,VAR2=value2'. This can be used to provide TF_VAR's"
         required: false
         default: ""
-
+      GITHUB_BASE_REF:
+        description: target branch merging into
+        type: string
+        required: true
+      GITHUB_HEAD_REF:
+        description: source branch coming from
+        type: string
+        required: true
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -124,4 +131,6 @@ jobs:
       # run unit tests
       - name: Unit Tests
         run: |
+          export GITHUB_BASE_REF=${{inputs.GITHUB_BASE_REF}}
+          export GITHUB_HEAD_REF=${{inputs.GITHUB_HEAD_REF}}
           make run-tests
