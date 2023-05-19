@@ -1,0 +1,40 @@
+on:
+  workflow_call:
+    inputs:
+      github_token:
+        description: 'Personal access token used to authenticate with the GitHub API. Defaults to pipeline token'
+        required: false
+        type: string
+    outputs:
+      commit_id:
+        description: "The latest commit id"
+        value: ${{ jobs.get-pr-details.outputs.commit_id }}
+      target_branch:
+        description: "branch the PR is targeting"
+        value: ${{ jobs.get-pr-details.outputs.target_branch }}
+      source_branch:
+        description: "branch the PR is coming from"
+        value: ${{ jobs.get-pr-details.outputs.source_branch }}
+
+
+jobs:
+  get-pr-details:
+    runs-on: ubuntu-latest
+    outputs:
+      commit_id: ${{ steps.pr_details.outputs.COMMIT_ID }}
+      target_branch: ${{ steps.pr_details.outputs.TARGET_BRANCH }}
+      source_branch: ${{ steps.pr_details.outputs.SOURCE_BRANCH }}
+    steps:
+      - name: Get PR Details
+        id: pr_details
+        run: |
+          pull_request_url=$(jq -r ".issue.pull_request.url" "$GITHUB_EVENT_PATH")
+          pr_json=$(curl -s -H "Authorization: Bearer ${{ github.token }}" \
+            --retry 3 \
+            "$pull_request_url")
+          commit_id=$(echo "${pr_json}" | jq -r ".head.sha")
+          target_branch=$(echo "${pr_json}" | jq -r ".base.ref")
+          source_branch=$(echo "${pr_json}" | jq -r ".head.ref")
+          echo "COMMIT_ID=$commit_id" >> "$GITHUB_OUTPUT"
+          echo "TARGET_BRANCH=$target_branch" >> "$GITHUB_OUTPUT"
+          echo "SOURCE_BRANCH=$source_branch" >> "$GITHUB_OUTPUT"
