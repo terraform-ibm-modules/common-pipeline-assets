@@ -15,7 +15,7 @@ jobs:
   start-pipeline:
     needs: [ notify_requirements ]
     # Only start if the run pipeline was posted by a collaborator
-    if: ${{ github.event.issue.pull_request && github.event.comment.body == '/run pipeline' && github.event.comment.author_association=='CONTRIBUTOR' }}
+    if: ${{ github.event.issue.pull_request && github.event.comment.body == '/run pipeline' }}
     uses: ./.github/workflows/get-latest-pr-details.yml
     with:
       github_token: ${{ github.token }}
