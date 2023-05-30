@@ -8,9 +8,14 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
+  notify_requirements:
+    uses: ./.github/workflows/post-usage.yml
+    secrets: inherit
+
   start-pipeline:
+    needs: [ notify_requirements ]
     # Only start if the run pipeline was posted by a collaborator
-    if: ${{ github.event.issue.pull_request && github.event.comment.body == '/run pipeline' && github.event.comment.author_association=='CONTRIBUTOR' }}
+    if: ${{ github.event.issue.pull_request && github.event.comment.body == '/run pipeline' }}
     uses: ./.github/workflows/get-latest-pr-details.yml
     with:
       github_token: ${{ github.token }}
@@ -60,6 +65,3 @@ jobs:
       sha: ${{ needs.start-pipeline.outputs.commit_id }}
       target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       github_repository: ${{ github.repository }}
-
-  notify_contributor_and_label_required:
-    uses: ./.github/workflows/post-usage.yml
