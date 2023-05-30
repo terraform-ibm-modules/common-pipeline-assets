@@ -4,14 +4,24 @@ on:
 jobs:
   Notify-Contributor-Requirements:
     runs-on: ubuntu-latest
-    if: ${{ github.event.issue.pull_request && github.event.comment.body == '/run pipeline' && github.event.comment.author_association != 'CONTRIBUTOR' }}
+    if: ${{ github.event.issue.pull_request && github.event.comment.body == '/run pipeline' }}
+    env:
+      REQUIRED_TEAM: github-collaborators
     steps:
-      - name: Post Comment
+      - name: Check Team Membership
+        id: check_team
         run: |
-          echo '${{ toJson(github.event) }}'
-          echo 'Actor: ${{ github.actor }}'
-          echo 'Author Association: ${{ github.event.comment.author_association }}'
-          curl -X POST -H "Authorization: Bearer ${{secrets.GITHUB_TOKEN}}" \
+          user_in_team=$(curl -X GET -H "Authorization: Bearer ${{secrets.ORG_READER_GH_TOKEN}}" \
           -H "Accept: application/vnd.github.v3+json" \
-          https://api.github.com/repos/${{github.repository}}/issues/${{github.event.issue.number}}/comments \
-          -d "{\"body\": \"@${{github.actor}} you must be a collaborator in order to trigger the pipeline.\"}"
+          "https://api.github.com/orgs/${{github.event.organization.login}}/teams/${{env.REQUIRED_TEAM}}/memberships/${{github.actor}}" | jq -r '.state')
+          echo "user_in_team=$user_in_team" >> $GITHUB_ENV
+
+      - name: Post Comment and stop workflow if user is not a member
+        run: |
+          if [[ "${{ env.user_in_team }}" != "active" ]]; then
+            curl -X POST -H "Authorization: Bearer ${{secrets.GITHUB_TOKEN}}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{github.repository}}/issues/${{github.event.issue.number}}/comments \
+            -d "{\"body\": \"@${{github.actor}} you must be in the team **[${{env.REQUIRED_TEAM}}](https://github.com/orgs/${{github.event.organization.login}}/teams/${{env.REQUIRED_TEAM}})** in order to trigger the pipeline.\"}"
+            exit 1
+          fi
