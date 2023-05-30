@@ -8,6 +8,9 @@ jobs:
     steps:
       - name: Post Comment
         run: |
+          echo '${{ toJson(github.event) }}'
+          echo 'Actor: ${{ github.actor }}'
+          echo 'Author Association: ${{ github.event.comment.author_association }}'
           curl -X POST -H "Authorization: Bearer ${{secrets.GITHUB_TOKEN}}" \
           -H "Accept: application/vnd.github.v3+json" \
           https://api.github.com/repos/${{github.repository}}/issues/${{github.event.issue.number}}/comments \
