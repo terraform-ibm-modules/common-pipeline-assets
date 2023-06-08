@@ -1,5 +1,5 @@
 # common-pipeline-assets
-[![Build Status](https://github.com/terraform-ibm-modules/common-pipeline-assets/actions/workflows/ci.yml/badge.svg)](https://github.com/terraform-ibm-modules/common-pipeline-assets/actions/workflows/ci.yml)
+
 [![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)](https://github.com/semantic-release/semantic-release)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 
@@ -18,6 +18,6 @@ For example, here's how the `common-terraform-module-ci` workflow is called in t
 ```yaml
 jobs:
   call-terraform-ci-pipeline:
-    uses: terraform-ibm-modules/common-pipeline-assets/.github/workflows/common-terraform-module-ci.yml@v1.11.1
+    uses: terraform-ibm-modules/common-pipeline-assets/.github/workflows/common-terraform-module-ci.yml@v1.14.0
     secrets: inherit
 ```
