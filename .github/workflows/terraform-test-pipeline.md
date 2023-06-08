@@ -13,19 +13,19 @@ This action operates on workflow calls and is composed of two jobs:
 
 To use this action in your GitHub workflow, you will need to provide input parameters as per your requirements. The following inputs can be configured:
 
-| Input Parameter       | Description                                                                                                                                            | Required | Default Value                                          |
-|-----------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|----------|--------------------------------------------------------|
-| `checkout_commit`     | Commit ID you want to checkout.                                                                                                                        | Yes      |                                                        |
-| `craConfigYaml`       | A YAML containing the configuration for CRA V2. If used, the other CRA inputs are overwritten.                                                         | No       |                                                        |
-| `craTarget`           | Target directory for CRA scan (comma-separated for multiple scans). If not provided, the CRA Scan will not be run.                                     | No       |                                                        |
-| `craGoalIgnoreFile`   | CRA Ignore file to use (for SCC v1). If not provided, it checks the repo root directory for `cra-tf-validate-ignore-goals.json`.                      | No       | "cra-tf-validate-ignore-goals.json"                    |
-| `craRuleIgnoreFile`   | CRA Ignore file to use (for SCC v2). If not provided, it checks the repo root directory for `cra-tf-validate-ignore-rules.json`.                      | No       | "cra-tf-validate-ignore-rules.json"                    |
-| `craSCCv2`            | Flag to use SCCv2 CRA `run-cra-scc-v2.sh`.                                                                                                            | No       | false                                                  |
-| `accountID`           | The IBM Cloud Account ID input for CRA SCC v2.                                                                                                        | No       | "abac0df06b644a9cabc6e44f55b3880e"                     |
-| `profileID`           | The Profile ID input for CRA SCC v2. Ensure to use a US-specific ID.                                                                                   | No       | "4c67f813-8723-4029-8b44-848fb989899e"                 |
-| `craEnvironmentVariables`| An optional list of environment variables for CRA in the format 'VAR1=value1,VAR2=value2'. Useful for providing TF_VARs.                               | No       |                                                        |
-| `GITHUB_BASE_REF`     | The target branch merging into.                                                                                                                        | Yes      |                                                        |
-| `GITHUB_HEAD_REF`     | The source branch coming from.                                                                                                                         | Yes      |                                                        |
+| Input Parameter           | Description                                                                                                                      | Required | Default Value                                          |
+|---------------------------|----------------------------------------------------------------------------------------------------------------------------------|----------|--------------------------------------------------------|
+| `checkout_commit`         | Commit ID you want to checkout.                                                                                                  | Yes      |                                                        |
+| `craConfigYamlFile`       | A YAML config file containing the configuration for CRA V2. If used, the other CRA inputs are overwritten.                       | No       |                                                        |
+| `craTarget`               | Target directory for CRA scan (comma-separated for multiple scans). If not provided, the CRA Scan will not be run.               | No       |                                                        |
+| `craGoalIgnoreFile`       | CRA Ignore file to use (for SCC v1). If not provided, it checks the repo root directory for `cra-tf-validate-ignore-goals.json`. | No       | "cra-tf-validate-ignore-goals.json"                    |
+| `craRuleIgnoreFile`       | CRA Ignore file to use (for SCC v2). If not provided, it checks the repo root directory for `cra-tf-validate-ignore-rules.json`. | No       | "cra-tf-validate-ignore-rules.json"                    |
+| `craSCCv2`                | Flag to use SCCv2 CRA `run-cra-scc-v2.sh`.                                                                                       | No       | false                                                  |
+| `accountID`               | The IBM Cloud Account ID input for CRA SCC v2.                                                                                   | No       | "abac0df06b644a9cabc6e44f55b3880e"                     |
+| `profileID`               | The Profile ID input for CRA SCC v2. Ensure to use a US-specific ID.                                                             | No       | "4c67f813-8723-4029-8b44-848fb989899e"                 |
+| `craEnvironmentVariables` | An optional list of environment variables for CRA in the format 'VAR1=value1,VAR2=value2'. Useful for providing TF_VARs.         | No       |                                                        |
+| `GITHUB_BASE_REF`         | The target branch merging into.                                                                                                  | Yes      |                                                        |
+| `GITHUB_HEAD_REF`         | The source branch coming from.                                                                                                   | Yes      |                                                        |
 
 ## Jobs
 

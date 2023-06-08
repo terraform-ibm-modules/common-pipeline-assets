@@ -6,9 +6,9 @@ on:
         description: Commit ID you want to checkout
         type: string
         required: true
-      craConfigYaml:
+      craConfigYamlFile:
         type: string
-        description: "A YAML containing the configuration for CRA V2. If values are missing it will try to use the other inputs as default"
+        description: "A YAML config file containing the configuration for CRA V2. If values are missing it will try to use the other inputs as default"
         required: false
       craTarget:
         type: string
@@ -100,10 +100,10 @@ jobs:
           set -e
 
           # Check if YAML file is provided
-          if [[ -n "${{ inputs.craConfigYaml }}" ]]; then
-            if [[ -f "${{ inputs.craConfigYaml }}" ]]; then
+          if [[ -n "${{ inputs.craConfigYamlFile }}" ]]; then
+            if [[ -f "${{ inputs.craConfigYamlFile }}" ]]; then
               # Parse the YAML file and process each target
-              TARGETS=$(yq e '.CRA_TARGETS' ${{ inputs.craConfigYaml }})
+              TARGETS=$(yq e '.CRA_TARGETS' ${{ inputs.craConfigYamlFile }})
               for TARGET in "${TARGETS[@]}"; do
                 CRA_TARGET=$(yq e '.CRA_TARGET' "${TARGET}")
                 CRA_ENVIRONMENT_VARIABLES=$(yq e '.CRA_ENVIRONMENT_VARIABLES' "${TARGET}")
@@ -133,7 +133,7 @@ jobs:
                 fi
               done
             else
-              echo "Provided YAML configuration file '${{ inputs.craConfigYaml }}' not found!"
+              echo "Provided YAML configuration file '${{ inputs.craConfigYamlFile }}' not found!"
               exit 1
             fi
           else
