@@ -103,12 +103,8 @@ jobs:
           if [[ -n "${{ inputs.craConfigYamlFile }}" ]]; then
             if [[ -f "${{ inputs.craConfigYamlFile }}" ]]; then
               # Parse the YAML file and process each target
-              CRA_CONFIG_CONTENT=$(cat "${{ inputs.craConfigYamlFile }}")
-              # First, convert newlines to null characters, as bash's read can handle these
-              TARGET_CONFIGS=$(echo "$CRA_CONFIG_CONTENT" | yq eval '.CRA_TARGETS' - | tr '\n' '\0')
-
-              # Then, iterate through TARGET_CONFIGS line by line (null-separated)
-              while IFS= read -r -d '' TARGET_CONFIG; do
+              CRA_CONFIG_CONTENT=$(yq eval '.CRA_TARGETS' "${{ inputs.craConfigYamlFile }}")
+              echo "$CRA_CONFIG_CONTENT" | while read -r TARGET_CONFIG; do
                 CRA_TARGET=$(echo "$TARGET_CONFIG" | yq eval '.CRA_TARGET' - || echo "${{ inputs.craTarget }}")
                 CRA_ENVIRONMENT_VARIABLES=$(echo "$TARGET_CONFIG" | yq eval '.CRA_ENVIRONMENT_VARIABLES' - || echo "${{ inputs.craEnvironmentVariables }}")
                 CRA_RULE_IGNORE_FILE=$(echo "$TARGET_CONFIG" | yq eval '.CRA_RULE_IGNORE_FILE' - || echo "${{ inputs.craRuleIgnoreFile }}")
@@ -151,7 +147,7 @@ jobs:
                 else
                   echo "No CRA target specified for this configuration!"
                 fi
-              done <<< "$TARGET_CONFIGS"
+              done
             else
               echo "Provided YAML configuration file '${{ inputs.craConfigYamlFile }}' not found!"
               exit 1
@@ -190,6 +186,7 @@ jobs:
               fi
             done
           fi
+
 
 
 # run unit tests
