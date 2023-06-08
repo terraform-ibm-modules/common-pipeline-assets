@@ -109,11 +109,27 @@ jobs:
 
               # Then, iterate through TARGET_CONFIGS line by line (null-separated)
               while IFS= read -r -d '' TARGET_CONFIG; do
-                CRA_TARGET=$(echo "$TARGET_CONFIG" | yq eval '.CRA_TARGET' -)
-                CRA_ENVIRONMENT_VARIABLES=$(echo "$TARGET_CONFIG" | yq eval '.CRA_ENVIRONMENT_VARIABLES' -)
-                CRA_RULE_IGNORE_FILE=$(echo "$TARGET_CONFIG" | yq eval '.CRA_RULE_IGNORE_FILE' -)
+                CRA_TARGET=$(echo "$TARGET_CONFIG" | yq eval '.CRA_TARGET' - || echo "${{ inputs.craTarget }}")
+                CRA_ENVIRONMENT_VARIABLES=$(echo "$TARGET_CONFIG" | yq eval '.CRA_ENVIRONMENT_VARIABLES' - || echo "${{ inputs.craEnvironmentVariables }}")
+                CRA_RULE_IGNORE_FILE=$(echo "$TARGET_CONFIG" | yq eval '.CRA_RULE_IGNORE_FILE' - || echo "${{ inputs.craRuleIgnoreFile }}")
+
                 ACCOUNT_ID=$(echo "$TARGET_CONFIG" | yq eval '.ACCOUNT_ID' -)
+                if [ -z "$ACCOUNT_ID" ]; then
+                  ACCOUNT_ID="${ACCOUNT_ID}"
+                  if [ -z "$ACCOUNT_ID" ]; then
+                    echo "Error: No ACCOUNT_ID specified in the YAML config or as an environment variable."
+                    exit 1
+                  fi
+                fi
+
                 PROFILE_ID=$(echo "$TARGET_CONFIG" | yq eval '.PROFILE_ID' -)
+                if [ -z "$PROFILE_ID" ]; then
+                 PROFILE_ID="${PROFILE_ID}"
+                   if [ -z "$PROFILE_ID" ]; then
+                    echo "Error: No PROFILE_ID specified in the YAML config or as an environment variable."
+                    exit 1
+                  fi
+                fi
 
                 # Export environment variables if provided
                 if [ -n "$CRA_ENVIRONMENT_VARIABLES" ]; then
@@ -135,48 +151,47 @@ jobs:
                 else
                   echo "No CRA target specified for this configuration!"
                 fi
-              done  <<< "$TARGET_CONFIGS"
+              done <<< "$TARGET_CONFIGS"
             else
               echo "Provided YAML configuration file '${{ inputs.craConfigYamlFile }}' not found!"
               exit 1
-            fi
-          else
-            export CRA_IGNORE_GOALS_FILE="$(pwd)/${{ inputs.craGoalIgnoreFile }}"
-            export CRA_IGNORE_RULES_FILE="$(pwd)/${{ inputs.craRuleIgnoreFile }}"
-
-            ENV_VARS="${{ inputs.craEnvironmentVariables }}"
-            if [ -n "$ENV_VARS" ]; then
-              IFS=',' read -ra ENV_VARS_ARRAY <<< "$ENV_VARS"
-              for i in "${ENV_VARS_ARRAY[@]}"; do
-                # Use an array to store the variable and value
-                ENV_VAR=(${i//=/ })
-                echo "Exporting environment variable: ${ENV_VAR[0]}"
-                export "${ENV_VAR[0]}"="${ENV_VAR[1]}"
-              done
-            else
-              echo "No input environment variables to export"
-            fi
-
-            # Install CRA plugin if not detected
-            if ! ibmcloud plugin show cra; then
-              ibmcloud plugin install cra -f
-            fi
-
-            # Run CRA scan for each target in the comma-separated list
-            IFS=',' read -ra CRA_TARGETS_ARRAY <<< "${{ inputs.craTarget }}"
-            for target in "${CRA_TARGETS_ARRAY[@]}"; do
-              if ${{ inputs.craSCCv2 }}; then
-                echo "CRA IGNORE FILE: ${CRA_IGNORE_RULES_FILE}"
-                ci/run-cra-scc-v2.sh "$target"
-              else
-                echo "CRA IGNORE FILE: ${CRA_IGNORE_GOALS_FILE}"
-                ci/run-cra.sh "$target"
               fi
-            done
+            else
+              export CRA_IGNORE_GOALS_FILE="$(pwd)/${{ inputs.craGoalIgnoreFile }}"
+              export CRA_IGNORE_RULES_FILE="$(pwd)/${{ inputs.craRuleIgnoreFile }}"
+
+              ENV_VARS="${{ inputs.craEnvironmentVariables }}"
+              if [ -n "$ENV_VARS" ]; then
+                IFS=',' read -ra ENV_VARS_ARRAY <<< "$ENV_VARS"
+                for i in "${ENV_VARS_ARRAY[@]}"; do
+                  # Use an array to store the variable and value
+                  ENV_VAR=(${i//=/ })
+                  echo "Exporting environment variable: ${ENV_VAR[0]}"
+                  export "${ENV_VAR[0]}"="${ENV_VAR[1]}"
+                done
+              else
+                echo "No input environment variables to export"
+              fi
+
+              # Install CRA plugin if not detected
+              if ! ibmcloud plugin show cra; then
+                ibmcloud plugin install cra -f
+              fi
+
+              # Run CRA scan for each target in the comma-separated list
+              IFS=',' read -ra CRA_TARGETS_ARRAY <<< "${{ inputs.craTarget }}"
+              for target in "${CRA_TARGETS_ARRAY[@]}"; do
+                if "${{ inputs.craSCCv2 }"}; then
+                  echo "CRA IGNORE FILE: ${CRA_IGNORE_RULES_FILE}"
+                  ci/run-cra-scc-v2.sh "$target"
+                else
+                  echo "CRA IGNORE FILE: ${CRA_IGNORE_GOALS_FILE}"
+                  ci/run-cra.sh "$target"
+                fi
+              done
           fi
 
-
-      # run unit tests
+# run unit tests
       - name: Unit Tests
         run: |
           export GITHUB_BASE_REF=${{inputs.GITHUB_BASE_REF}}
