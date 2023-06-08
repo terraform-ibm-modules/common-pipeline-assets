@@ -163,7 +163,7 @@ jobs:
             for target in "${CRA_TARGETS_ARRAY[@]}"; do
               if ${{ inputs.craSCCv2 }}; then
                 echo "CRA IGNORE FILE: ${CRA_IGNORE_RULES_FILE}"
-                ci/run-cra-scc-v2.sh "$target
+                ci/run-cra-scc-v2.sh "$target"
               else
                 echo "CRA IGNORE FILE: ${CRA_IGNORE_GOALS_FILE}"
                 ci/run-cra.sh "$target"
