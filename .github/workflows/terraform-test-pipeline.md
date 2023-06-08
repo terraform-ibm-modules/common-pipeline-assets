@@ -70,7 +70,8 @@ the corresponding input value will be used as a fallback.
 This allows you to use the YAML file to override input values for specific scans,
 while still maintaining the ability to set defaults using the input parameters.
 This means that even when the YAML file is in use,
-input parameters aren't entirely ignored but serve as default values when a parameter is missing in the YAML.
+input parameters aren't entirely ignored but serve as default values when a parameter is missing in the YAML,
+except `CRA_ENVIRONMENT_VARIABLES` and `CRA_RULE_IGNORE_FILE` which will not take defaults from the inputs.
 
 For example, if you do not provide the `ACCOUNT_ID` in the YAML file,
 the action will use the `accountID` from the input parameters.

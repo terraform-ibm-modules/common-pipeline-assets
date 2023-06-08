@@ -98,33 +98,54 @@ jobs:
         run: |
           #!/bin/bash
           set -e
-
+          DEFAULT_ACCOUNT_ID="$ACCOUNT_ID"
+          DEFAULT_PROFILE_ID="$PROFILE_ID"
           # Check if YAML file is provided
           if [[ -n "${{ inputs.craConfigYamlFile }}" ]]; then
             if [[ -f "${{ inputs.craConfigYamlFile }}" ]]; then
               # Parse the YAML file and process each target
               length=$(yq e '.CRA_TARGETS | length' "${{ inputs.craConfigYamlFile }}")
               for ((i=0; i<length; i++)); do
-                CRA_TARGET=$(yq e ".CRA_TARGETS[$i].CRA_TARGET" "${{ inputs.craConfigYamlFile }}" || echo "${{ inputs.craTarget }}")
-                CRA_ENVIRONMENT_VARIABLES=$(yq e ".CRA_TARGETS[$i].CRA_ENVIRONMENT_VARIABLES" "${{ inputs.craConfigYamlFile }}" || echo "${{ inputs.craEnvironmentVariables }}")
-                CRA_RULE_IGNORE_FILE=$(yq e ".CRA_TARGETS[$i].CRA_RULE_IGNORE_FILE" "${{ inputs.craConfigYamlFile }}" || echo "${{ inputs.craRuleIgnoreFile }}")
+                CRA_TARGET=$(yq e ".CRA_TARGETS[$i].CRA_TARGET | select (.!=null)" "${{ inputs.craConfigYamlFile }}" || echo "${{ inputs.craTarget }}")
+                if [ -z "$CRA_TARGET" ]; then
+                  CRA_TARGET="${{ inputs.craTarget }}"
+                  if [ -z "$CRA_TARGET" ]; then
+                    echo "Error: No CRA_TARGET specified in the YAML config or as an environment variable."
+                    exit 1
+                  else
+                    echo "CRA_TARGET ${CRA_TARGET} set from environment variable"
+                  fi
+                else
+                  echo "CRA_TARGET ${CRA_TARGET} set from config file ${{ inputs.craConfigYamlFile }}"
+                fi
 
-                ACCOUNT_ID=$(yq e ".CRA_TARGETS[$i].ACCOUNT_ID" "${{ inputs.craConfigYamlFile }}")
+                CRA_ENVIRONMENT_VARIABLES=$(yq e ".CRA_TARGETS[$i].CRA_ENVIRONMENT_VARIABLES | select (.!=null)" "${{ inputs.craConfigYamlFile }}")
+                CRA_RULE_IGNORE_FILE=$(yq e ".CRA_TARGETS[$i].CRA_RULE_IGNORE_FILE | select (.!=null)" "${{ inputs.craConfigYamlFile }}")
+
+                ACCOUNT_ID=$(yq e ".CRA_TARGETS[$i].ACCOUNT_ID | select (.!=null)" "${{ inputs.craConfigYamlFile }}")
                 if [ -z "$ACCOUNT_ID" ]; then
-                  ACCOUNT_ID="${ACCOUNT_ID}"
+                  ACCOUNT_ID="${DEFAULT_ACCOUNT_ID}"
                   if [ -z "$ACCOUNT_ID" ]; then
                     echo "Error: No ACCOUNT_ID specified in the YAML config or as an environment variable."
                     exit 1
+                  else
+                    echo "ACCOUNT_ID ${ACCOUNT_ID} set from environment variable"
                   fi
+                else
+                  echo "ACCOUNT_ID ${ACCOUNT_ID} set from config file ${{ inputs.craConfigYamlFile }}"
                 fi
 
-                PROFILE_ID=$(yq e ".CRA_TARGETS[$i].PROFILE_ID" "${{ inputs.craConfigYamlFile }}")
+                PROFILE_ID=$(yq e ".CRA_TARGETS[$i].PROFILE_ID | select (.!=null)" "${{ inputs.craConfigYamlFile }}")
                 if [ -z "$PROFILE_ID" ]; then
-                  PROFILE_ID="${PROFILE_ID}"
+                  PROFILE_ID="${DEFAULT_PROFILE_ID}"
                   if [ -z "$PROFILE_ID" ]; then
                     echo "Error: No PROFILE_ID specified in the YAML config or as an environment variable."
                     exit 1
+                  else
+                    echo "PROFILE_ID ${PROFILE_ID} set from environment variable"
                   fi
+                else
+                  echo "PROFILE_ID ${PROFILE_ID} set from config file ${{ inputs.craConfigYamlFile }}"
                 fi
 
                 # Export environment variables if provided
