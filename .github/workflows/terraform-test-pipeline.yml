@@ -103,13 +103,13 @@ jobs:
           if [[ -n "${{ inputs.craConfigYamlFile }}" ]]; then
             if [[ -f "${{ inputs.craConfigYamlFile }}" ]]; then
               # Parse the YAML file and process each target
-              CRA_CONFIG_CONTENT=$(yq eval '.CRA_TARGETS' "${{ inputs.craConfigYamlFile }}")
-              echo "$CRA_CONFIG_CONTENT" | while read -r TARGET_CONFIG; do
-                CRA_TARGET=$(echo "$TARGET_CONFIG" | yq eval '.CRA_TARGET' - || echo "${{ inputs.craTarget }}")
-                CRA_ENVIRONMENT_VARIABLES=$(echo "$TARGET_CONFIG" | yq eval '.CRA_ENVIRONMENT_VARIABLES' - || echo "${{ inputs.craEnvironmentVariables }}")
-                CRA_RULE_IGNORE_FILE=$(echo "$TARGET_CONFIG" | yq eval '.CRA_RULE_IGNORE_FILE' - || echo "${{ inputs.craRuleIgnoreFile }}")
+              length=$(yq e '.CRA_TARGETS | length' "${{ inputs.craConfigYamlFile }}")
+              for ((i=0; i<length; i++)); do
+                CRA_TARGET=$(yq e ".CRA_TARGETS[$i].CRA_TARGET" "${{ inputs.craConfigYamlFile }}" || echo "${{ inputs.craTarget }}")
+                CRA_ENVIRONMENT_VARIABLES=$(yq e ".CRA_TARGETS[$i].CRA_ENVIRONMENT_VARIABLES" "${{ inputs.craConfigYamlFile }}" || echo "${{ inputs.craEnvironmentVariables }}")
+                CRA_RULE_IGNORE_FILE=$(yq e ".CRA_TARGETS[$i].CRA_RULE_IGNORE_FILE" "${{ inputs.craConfigYamlFile }}" || echo "${{ inputs.craRuleIgnoreFile }}")
 
-                ACCOUNT_ID=$(echo "$TARGET_CONFIG" | yq eval '.ACCOUNT_ID' -)
+                ACCOUNT_ID=$(yq e ".CRA_TARGETS[$i].ACCOUNT_ID" "${{ inputs.craConfigYamlFile }}")
                 if [ -z "$ACCOUNT_ID" ]; then
                   ACCOUNT_ID="${ACCOUNT_ID}"
                   if [ -z "$ACCOUNT_ID" ]; then
@@ -118,7 +118,7 @@ jobs:
                   fi
                 fi
 
-                PROFILE_ID=$(echo "$TARGET_CONFIG" | yq eval '.PROFILE_ID' -)
+                PROFILE_ID=$(yq e ".CRA_TARGETS[$i].PROFILE_ID" "${{ inputs.craConfigYamlFile }}")
                 if [ -z "$PROFILE_ID" ]; then
                   PROFILE_ID="${PROFILE_ID}"
                   if [ -z "$PROFILE_ID" ]; then
