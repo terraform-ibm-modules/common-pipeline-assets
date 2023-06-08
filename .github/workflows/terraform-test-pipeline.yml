@@ -94,7 +94,7 @@ jobs:
 
       # run CRA scan
       - name: CRA Scan
-        if: inputs.craTarget != '' || inputs.craConfigYaml != ''
+        if: inputs.craTarget != '' || inputs.craConfigYamlFile != ''
         run: |
           #!/bin/bash
           set -e
