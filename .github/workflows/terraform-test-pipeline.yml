@@ -103,13 +103,17 @@ jobs:
           if [[ -n "${{ inputs.craConfigYamlFile }}" ]]; then
             if [[ -f "${{ inputs.craConfigYamlFile }}" ]]; then
               # Parse the YAML file and process each target
-              TARGETS=$(yq e '.CRA_TARGETS' ${{ inputs.craConfigYamlFile }})
-              for TARGET in "${TARGETS[@]}"; do
-                CRA_TARGET=$(yq e '.CRA_TARGET' "${TARGET}")
-                CRA_ENVIRONMENT_VARIABLES=$(yq e '.CRA_ENVIRONMENT_VARIABLES' "${TARGET}")
-                CRA_RULE_IGNORE_FILE=$(yq e '.CRA_RULE_IGNORE_FILE' "${TARGET}")
-                ACCOUNT_ID=$(yq e '.ACCOUNT_ID' "${TARGET}")
-                PROFILE_ID=$(yq e '.PROFILE_ID' "${TARGET}")
+              CRA_CONFIG_CONTENT=$(cat "${{ inputs.craConfigYamlFile }}")
+              # First, convert newlines to null characters, as bash's read can handle these
+              TARGET_CONFIGS=$(echo "$CRA_CONFIG_CONTENT" | yq eval '.CRA_TARGETS' - | tr '\n' '\0')
+
+              # Then, iterate through TARGET_CONFIGS line by line (null-separated)
+              while IFS= read -r -d '' TARGET_CONFIG; do
+                CRA_TARGET=$(echo "$TARGET_CONFIG" | yq eval '.CRA_TARGET' -)
+                CRA_ENVIRONMENT_VARIABLES=$(echo "$TARGET_CONFIG" | yq eval '.CRA_ENVIRONMENT_VARIABLES' -)
+                CRA_RULE_IGNORE_FILE=$(echo "$TARGET_CONFIG" | yq eval '.CRA_RULE_IGNORE_FILE' -)
+                ACCOUNT_ID=$(echo "$TARGET_CONFIG" | yq eval '.ACCOUNT_ID' -)
+                PROFILE_ID=$(echo "$TARGET_CONFIG" | yq eval '.PROFILE_ID' -)
 
                 # Export environment variables if provided
                 if [ -n "$CRA_ENVIRONMENT_VARIABLES" ]; then
@@ -131,7 +135,7 @@ jobs:
                 else
                   echo "No CRA target specified for this configuration!"
                 fi
-              done
+              done  <<< "$TARGET_CONFIGS"
             else
               echo "Provided YAML configuration file '${{ inputs.craConfigYamlFile }}' not found!"
               exit 1
