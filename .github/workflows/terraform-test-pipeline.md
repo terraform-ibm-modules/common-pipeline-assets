@@ -59,8 +59,9 @@ This YAML file is usually located in your repository beside the code. A list of 
 version: "v1"
 CRA_TARGETS:
   - CRA_TARGET: "" # Target directory for CRA scan (comma-separated for multiple scans). If not provided, the CRA Scan will not be run.
-    CRA_ENVIRONMENT_VARIABLES:  # An optional list of environment variables for CRA, where the key is the variable name and value is the value. Useful for providing TF_VARs.
-      - TF_VAR_sample: "sample value"
+    CRA_ENVIRONMENT_VARIABLES:  # An optional map of environment variables for CRA, where the key is the variable name and value is the value. Useful for providing TF_VARs.
+      TF_VAR_sample: "sample value"
+      TF_VAR_other:  "another value"
     CRA_RULE_IGNORE_FILE: "" # CRA Ignore file to use. If not provided, it checks the repo root directory for `cra-tf-validate-ignore-rules.json`
     ACCOUNT_ID: "" # The IBM Cloud Account ID input for CRA SCC scan. If not provided, a default global value will be used.
     PROFILE_ID: "" # The Profile ID input for CRA SCC scan. Ensure to use a US-specific ID. If not provided, a default global value will be used.
