@@ -123,6 +123,9 @@ jobs:
                 # get full path to ignore file from root of the repo
                 if [[ -n "${CRA_RULE_IGNORE_FILE}" ]]; then
                   CRA_RULE_IGNORE_FILE="$(pwd)/${CRA_RULE_IGNORE_FILE}"
+                  echo "CRA_RULE_IGNORE_FILE: ${CRA_RULE_IGNORE_FILE}"
+                else
+                  echo "CRA_RULE_IGNORE_FILE not set in config file"
                 fi
 
                 ACCOUNT_ID=$(yq e ".CRA_TARGETS[$i].ACCOUNT_ID | select (.!=null)" "${{ inputs.craConfigYamlFile }}")
@@ -157,9 +160,9 @@ jobs:
                     echo "No environment variables to export for target ${CRA_TARGET}"
                 else
                   for ((j=0; j<env_vars_length; j++)); do
-                    env_var_key=$(yq e ".CRA_TARGETS[$i].CRA_ENVIRONMENT_VARIABLES[$j] | path | .[0]" "${{ inputs.craConfigYamlFile }}")
-                    env_var_value=$(yq e ".CRA_TARGETS[$i].CRA_ENVIRONMENT_VARIABLES[$j].$env_var_key" "${{ inputs.craConfigYamlFile }}")
-                    echo "Exporting environment variable: ${env_var_key}"
+                    env_var_key=$(yq e ".CRA_TARGETS[$i].CRA_ENVIRONMENT_VARIABLES[$j] | to_entries | .[$j].key" "${{ inputs.craConfigYamlFile }}")
+                    env_var_value=$(yq e ".CRA_TARGETS[$i].CRA_ENVIRONMENT_VARIABLES[$j].value" "${{ inputs.craConfigYamlFile }}")
+                    echo "Exporting environment variable: ${env_var_key}=${env_var_value}"
                     export "${env_var_key}"="${env_var_value}"
                   done
                 fi
