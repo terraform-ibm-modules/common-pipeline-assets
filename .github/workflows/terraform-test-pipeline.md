@@ -62,7 +62,7 @@ CRA_TARGETS:
     CRA_ENVIRONMENT_VARIABLES:  # An optional map of environment variables for CRA, where the key is the variable name and value is the value. Useful for providing TF_VARs.
       TF_VAR_sample: "sample value"
       TF_VAR_other:  "another value"
-    CRA_RULE_IGNORE_FILE: "" # CRA Ignore file to use. If not provided, it checks the repo root directory for `cra-tf-validate-ignore-rules.json`
+    CRA_IGNORE_RULES_FILE: "" # CRA Ignore file to use. If not provided, it checks the repo root directory for `cra-tf-validate-ignore-rules.json`
     ACCOUNT_ID: "" # The IBM Cloud Account ID input for CRA SCC scan. If not provided, a default global value will be used.
     PROFILE_ID: "" # The Profile ID input for CRA SCC scan. Ensure to use a US-specific ID. If not provided, a default global value will be used.
 ```
@@ -73,7 +73,7 @@ This allows you to use the YAML file to override input values for specific scans
 while still maintaining the ability to set defaults using the input parameters.
 This means that even when the YAML file is in use,
 input parameters aren't entirely ignored but serve as default values when a parameter is missing in the YAML,
-except `CRA_ENVIRONMENT_VARIABLES` and `CRA_RULE_IGNORE_FILE` which will not take defaults from the inputs.
+except `CRA_ENVIRONMENT_VARIABLES` and `CRA_IGNORE_RULES_FILE` which will not take defaults from the inputs.
 
 For example, if you do not provide the `ACCOUNT_ID` in the YAML file,
 the action will use the `accountID` from the input parameters.

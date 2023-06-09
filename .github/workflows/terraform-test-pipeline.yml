@@ -119,13 +119,13 @@ jobs:
                   echo "CRA_TARGET ${CRA_TARGET} set from config file ${{ inputs.craConfigYamlFile }}"
                 fi
 
-                CRA_RULE_IGNORE_FILE=$(yq e ".CRA_TARGETS[$i].CRA_RULE_IGNORE_FILE | select (.!=null)" "${{ inputs.craConfigYamlFile }}")
+                CRA_IGNORE_RULES_FILE=$(yq e ".CRA_TARGETS[$i].CRA_IGNORE_RULES_FILE | select (.!=null)" "${{ inputs.craConfigYamlFile }}")
                 # get full path to ignore file from root of the repo
-                if [[ -n "${CRA_RULE_IGNORE_FILE}" ]]; then
-                  export CRA_RULE_IGNORE_FILE="$(pwd)/${CRA_RULE_IGNORE_FILE}"
-                  echo "CRA_RULE_IGNORE_FILE: ${CRA_RULE_IGNORE_FILE}"
+                if [[ -n "${CRA_IGNORE_RULES_FILE}" ]]; then
+                  export CRA_IGNORE_RULES_FILE="$(pwd)/${CRA_IGNORE_RULES_FILE}"
+                  echo "CRA_IGNORE_RULES_FILE: ${CRA_IGNORE_RULES_FILE}"
                 else
-                  echo "CRA_RULE_IGNORE_FILE not set in config file"
+                  echo "CRA_IGNORE_RULES_FILE not set in config file"
                 fi
 
                 ACCOUNT_ID=$(yq e ".CRA_TARGETS[$i].ACCOUNT_ID | select (.!=null)" "${{ inputs.craConfigYamlFile }}")
@@ -178,7 +178,7 @@ jobs:
 
                 # Run CRA scan for the target
                 if [[ -n "${CRA_TARGET}" ]]; then
-                  echo "CRA IGNORE FILE: ${CRA_RULE_IGNORE_FILE}"
+                  echo "CRA IGNORE FILE: ${CRA_IGNORE_RULES_FILE}"
                   ci/run-cra-scc-v2.sh "$CRA_TARGET"
                 else
                   echo "No CRA target specified for this configuration!"
@@ -195,8 +195,8 @@ jobs:
                 echo "Unset environment variable: ${key}"
                 unset "${key}"
               done <<< "$env_var_keys_output"
-              if [[ -n "${CRA_RULE_IGNORE_FILE}" ]]; then
-                  unset CRA_RULE_IGNORE_FILE
+              if [[ -n "${CRA_IGNORE_RULES_FILE}" ]]; then
+                  unset CRA_IGNORE_RULES_FILE
               fi
             else
               echo "Provided YAML configuration file '${{ inputs.craConfigYamlFile }}' not found!"
