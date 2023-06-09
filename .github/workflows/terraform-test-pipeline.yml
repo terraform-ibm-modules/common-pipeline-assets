@@ -125,7 +125,8 @@ jobs:
                   export CRA_IGNORE_RULES_FILE="$(pwd)/${CRA_IGNORE_RULES_FILE}"
                   echo "CRA_IGNORE_RULES_FILE: ${CRA_IGNORE_RULES_FILE}"
                 else
-                  echo "CRA_IGNORE_RULES_FILE not set in config file"
+                  echo "CRA_IGNORE_RULES_FILE not set in config file, defaulting to cra-tf-validate-ignore-goals.json"
+                  export CRA_IGNORE_RULES_FILE="$(pwd)/cra-tf-validate-ignore-goals.json"
                 fi
 
                 ACCOUNT_ID=$(yq e ".CRA_TARGETS[$i].ACCOUNT_ID | select (.!=null)" "${{ inputs.craConfigYamlFile }}")
