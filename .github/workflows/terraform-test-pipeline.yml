@@ -186,15 +186,15 @@ jobs:
               done
 
               # Unset the variables
-              if [[ "${env_vars_length}" == "0" ]]; then
-                  echo "No environment variables to unset"
-              else
-                for ((j=0; j<env_vars_length; j++)); do
-                  env_var_key=$(echo $(yq e ".CRA_TARGETS[$i].CRA_ENVIRONMENT_VARIABLES[$j] | keys" "${{ inputs.craConfigYamlFile }}"))
-                  echo "Unsetting environment variable: ${env_var_key}"
-                  unset "${env_var_key}"
-                done
-              fi
+              # Iterate over each key
+              while IFS= read -r env_var_key; do
+                # sanitize key
+                key=${env_var_key//-}  # remove '-'
+                key=${key// }          # remove space
+
+                echo "Unset environment variable: ${key}"
+                unset "${key}"
+              done <<< "$env_var_keys_output"
               if [[ -n "${CRA_RULE_IGNORE_FILE}" ]]; then
                   unset CRA_RULE_IGNORE_FILE
               fi
