@@ -160,7 +160,7 @@ jobs:
                     echo "No environment variables to export for target ${CRA_TARGET}"
                 else
                   # Get all environment variable keys (names)
-                  env_var_keys_output=$(yq e ".CRA_TARGETS[0].CRA_ENVIRONMENT_VARIABLES | keys" "${craConfigYamlFile}")
+                  env_var_keys_output=$(yq e ".CRA_TARGETS[0].CRA_ENVIRONMENT_VARIABLES | keys" "${{ inputs.craConfigYamlFile }}")
 
                   # Iterate over each key
                   while IFS= read -r env_var_key; do
@@ -169,7 +169,7 @@ jobs:
                     key=${key// }          # remove space
                     echo "KEY: $key"
                     # Get the corresponding value
-                    env_var_value=$(yq e ".CRA_TARGETS[0].CRA_ENVIRONMENT_VARIABLES.${key}" "${craConfigYamlFile}")
+                    env_var_value=$(yq e ".CRA_TARGETS[0].CRA_ENVIRONMENT_VARIABLES.${key}" "${{ inputs.craConfigYamlFile }}")
 
                     echo "Exporting environment variable: ${key}=${env_var_value}"
                     export "${key}"="${env_var_value}"
