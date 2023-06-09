@@ -107,9 +107,9 @@ jobs:
               length=$(yq e '.CRA_TARGETS | length' "${{ inputs.craConfigYamlFile }}")
               for ((i=0; i<length; i++)); do
                 CRA_TARGET=$(yq e ".CRA_TARGETS[$i].CRA_TARGET | select (.!=null)" "${{ inputs.craConfigYamlFile }}" || echo "${{ inputs.craTarget }}")
-                if [ -z "$CRA_TARGET" ]; then
+                if [[ -z "$CRA_TARGET" ]]; then
                   CRA_TARGET="${{ inputs.craTarget }}"
-                  if [ -z "$CRA_TARGET" ]; then
+                  if [[ -z "$CRA_TARGET" ]]; then
                     echo "Error: No CRA_TARGET specified in the YAML config or as an environment variable."
                     exit 1
                   else
@@ -119,13 +119,12 @@ jobs:
                   echo "CRA_TARGET ${CRA_TARGET} set from config file ${{ inputs.craConfigYamlFile }}"
                 fi
 
-                CRA_ENVIRONMENT_VARIABLES=$(yq e ".CRA_TARGETS[$i].CRA_ENVIRONMENT_VARIABLES | select (.!=null)" "${{ inputs.craConfigYamlFile }}")
                 CRA_RULE_IGNORE_FILE=$(yq e ".CRA_TARGETS[$i].CRA_RULE_IGNORE_FILE | select (.!=null)" "${{ inputs.craConfigYamlFile }}")
 
                 ACCOUNT_ID=$(yq e ".CRA_TARGETS[$i].ACCOUNT_ID | select (.!=null)" "${{ inputs.craConfigYamlFile }}")
-                if [ -z "$ACCOUNT_ID" ]; then
+                if [[ -z "$ACCOUNT_ID" ]]; then
                   ACCOUNT_ID="${DEFAULT_ACCOUNT_ID}"
-                  if [ -z "$ACCOUNT_ID" ]; then
+                  if [[ -z "$ACCOUNT_ID" ]]; then
                     echo "Error: No ACCOUNT_ID specified in the YAML config or as an environment variable."
                     exit 1
                   else
@@ -136,9 +135,9 @@ jobs:
                 fi
 
                 PROFILE_ID=$(yq e ".CRA_TARGETS[$i].PROFILE_ID | select (.!=null)" "${{ inputs.craConfigYamlFile }}")
-                if [ -z "$PROFILE_ID" ]; then
+                if [[ -z "$PROFILE_ID" ]]; then
                   PROFILE_ID="${DEFAULT_PROFILE_ID}"
-                  if [ -z "$PROFILE_ID" ]; then
+                  if [[ -z "$PROFILE_ID" ]]; then
                     echo "Error: No PROFILE_ID specified in the YAML config or as an environment variable."
                     exit 1
                   else
@@ -148,21 +147,22 @@ jobs:
                   echo "PROFILE_ID ${PROFILE_ID} set from config file ${{ inputs.craConfigYamlFile }}"
                 fi
 
-                # Export environment variables if provided
-                if [ -n "$CRA_ENVIRONMENT_VARIABLES" ]; then
-                  IFS=',' read -ra ENV_VARS_ARRAY <<< "$CRA_ENVIRONMENT_VARIABLES"
-                  for i in "${ENV_VARS_ARRAY[@]}"; do
-                    # Use an array to store the variable and value
-                    ENV_VAR=(${i//=/ })
-                    echo "Exporting environment variable: ${ENV_VAR[0]}"
-                    export "${ENV_VAR[0]}"="${ENV_VAR[1]}"
-                  done
+                # Extract environment variables from YAML and export them
+                env_vars_length=$(yq e ".CRA_TARGETS[$i].CRA_ENVIRONMENT_VARIABLES | length" "${{ inputs.craConfigYamlFile }}")
+                if [[ "$env_vars_length" == "0" ]]; then
+                    echo "No environment variables to export for target ${CRA_TARGET}"
                 else
-                  echo "No environment variables to export for target ${CRA_TARGET}"
+                  for ((j=0; j<env_vars_length; j++)); do
+                    env_var_key=$(yq e ".CRA_TARGETS[$i].CRA_ENVIRONMENT_VARIABLES[$j] | path | .[0]" "${{ inputs.craConfigYamlFile }}")
+                    env_var_value=$(yq e ".CRA_TARGETS[$i].CRA_ENVIRONMENT_VARIABLES[$j].$env_var_key" "${{ inputs.craConfigYamlFile }}")
+                    echo "Exporting environment variable: ${ENV_VAR[0]}"
+                    export "${env_var_key}"="${env_var_value}"
+                  done
                 fi
 
+
                 # Run CRA scan for the target
-                if [ -n "${CRA_TARGET}" ]; then
+                if [[ -n "${CRA_TARGET}" ]]; then
                   echo "CRA IGNORE FILE: ${CRA_RULE_IGNORE_FILE}"
                   ci/run-cra-scc-v2.sh "$CRA_TARGET"
                 else
@@ -178,7 +178,7 @@ jobs:
             export CRA_IGNORE_RULES_FILE="$(pwd)/${{ inputs.craRuleIgnoreFile }}"
 
             ENV_VARS="${{ inputs.craEnvironmentVariables }}"
-            if [ -n "$ENV_VARS" ]; then
+            if [[ -n "$ENV_VARS" ]]; then
               IFS=',' read -ra ENV_VARS_ARRAY <<< "$ENV_VARS"
               for i in "${ENV_VARS_ARRAY[@]}"; do
                 # Use an array to store the variable and value
