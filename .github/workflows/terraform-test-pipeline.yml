@@ -155,7 +155,7 @@ jobs:
                   for ((j=0; j<env_vars_length; j++)); do
                     env_var_key=$(yq e ".CRA_TARGETS[$i].CRA_ENVIRONMENT_VARIABLES[$j] | path | .[0]" "${{ inputs.craConfigYamlFile }}")
                     env_var_value=$(yq e ".CRA_TARGETS[$i].CRA_ENVIRONMENT_VARIABLES[$j].$env_var_key" "${{ inputs.craConfigYamlFile }}")
-                    echo "Exporting environment variable: ${ENV_VAR[0]}"
+                    echo "Exporting environment variable: ${env_var_key}"
                     export "${env_var_key}"="${env_var_value}"
                   done
                 fi
@@ -169,6 +169,17 @@ jobs:
                   echo "No CRA target specified for this configuration!"
                 fi
               done
+
+                # Unset the variables
+                if [[ "$env_vars_length" == "0" ]]; then
+                    echo "No environment variables to unset"
+                else
+                  for ((j=0; j<env_vars_length; j++)); do
+                    env_var_key=$(yq e ".CRA_TARGETS[$i].CRA_ENVIRONMENT_VARIABLES[$j] | path | .[0]" "${{ inputs.craConfigYamlFile }}")
+                    echo "Unsetting environment variable: ${env_var_key}"
+                    unset "${env_var_key}"
+                  done
+                fi
             else
               echo "Provided YAML configuration file '${{ inputs.craConfigYamlFile }}' not found!"
               exit 1
