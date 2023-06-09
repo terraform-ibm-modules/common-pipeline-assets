@@ -159,12 +159,19 @@ jobs:
                 if [[ "${env_vars_length}" == "0" ]]; then
                     echo "No environment variables to export for target ${CRA_TARGET}"
                 else
-                  for ((j=0; j<env_vars_length; j++)); do
-                    env_var_key=$(echo $(yq e ".CRA_TARGETS[$i].CRA_ENVIRONMENT_VARIABLES[$j] | keys" "${{ inputs.craConfigYamlFile }}"))
-                    env_var_value=$(yq e ".CRA_TARGETS[$i].CRA_ENVIRONMENT_VARIABLES[$j].\"${env_var_key}\"" "${{ inputs.craConfigYamlFile }}")
-                    echo "Exporting environment variable: ${env_var_key}=${env_var_value}"
-                    export "${env_var_key}"="${env_var_value}"
-                  done
+                    # Get all environment variable keys (names) as an array
+                    env_var_keys=$(yq e ".CRA_TARGETS[$i].CRA_ENVIRONMENT_VARIABLES | keys" "${{ inputs.craConfigYamlFile }}")
+
+                    # Iterate over each key
+                    for env_var_key in "${env_var_keys[@]}"; do
+                      # sanitize key
+                      key=$(echo "${env_var_key}#- ")
+                      # Get the corresponding value
+                      env_var_value=$(yq e ".CRA_TARGETS[$i].CRA_ENVIRONMENT_VARIABLES.${key}" "${{ inputs.craConfigYamlFile }}")
+
+                      echo "Exporting environment variable: ${key}=${env_var_value}"
+                      export "${key}"="${env_var_value}"
+                    done
                 fi
 
 
