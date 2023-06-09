@@ -161,7 +161,7 @@ jobs:
                 else
                   for ((j=0; j<env_vars_length; j++)); do
                     env_var_key=$(echo $(yq e ".CRA_TARGETS[$i].CRA_ENVIRONMENT_VARIABLES[$j] | keys" "${{ inputs.craConfigYamlFile }}"))
-                    env_var_value=$(yq e ".CRA_TARGETS[$i].CRA_ENVIRONMENT_VARIABLES[$j].${env_var_key}" "${{ inputs.craConfigYamlFile }}")
+                    env_var_value=$(yq e ".CRA_TARGETS[$i].CRA_ENVIRONMENT_VARIABLES[$j].\"${env_var_key}\"" "${{ inputs.craConfigYamlFile }}")
                     echo "Exporting environment variable: ${env_var_key}=${env_var_value}"
                     export "${env_var_key}"="${env_var_value}"
                   done
