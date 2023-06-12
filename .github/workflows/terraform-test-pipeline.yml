@@ -100,6 +100,12 @@ jobs:
           set -e
           DEFAULT_ACCOUNT_ID="$ACCOUNT_ID"
           DEFAULT_PROFILE_ID="$PROFILE_ID"
+
+          # Install CRA plugin if not detected
+          if ! ibmcloud plugin show cra; then
+            ibmcloud plugin install cra -f
+          fi
+
           # Check if YAML file is provided
           if [[ -n "${{ inputs.craConfigYamlFile }}" ]]; then
             if [[ -f "${{ inputs.craConfigYamlFile }}" ]]; then
@@ -218,11 +224,6 @@ jobs:
               done
             else
               echo "No input environment variables to export"
-            fi
-
-            # Install CRA plugin if not detected
-            if ! ibmcloud plugin show cra; then
-              ibmcloud plugin install cra -f
             fi
 
             # Run CRA scan for each target in the comma-separated list
