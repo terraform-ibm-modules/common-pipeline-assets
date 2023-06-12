@@ -9,7 +9,6 @@ on:
         description: 'The state of the commit status'
         required: true
         type: string
-        default: 'pending'
       description:
         description: 'The description of the commit status'
         required: false
