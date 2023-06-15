@@ -3,6 +3,10 @@ name: Terraform-Module-CI
 on:
   workflow_call:
     inputs:
+      craConfigYamlFile:
+        type: string
+        description: "A YAML config file containing the configuration for CRA V2. If values are missing it will try to use the other inputs as default"
+        required: false
       craTarget:
         type: string
         description: "Target directory for CRA scan(accepts comma seperated list for multiple scans). If not provided CRA Scan will not be run"
@@ -92,6 +96,7 @@ jobs:
     uses: ./.github/workflows/terraform-test-pipeline.yml
     with:
       checkout_commit: ${{ needs.start-pipeline.outputs.commit_id }}
+      craConfigYamlFile: ${{ inputs.craConfigYamlFile }}
       craTarget: ${{ inputs.craTarget }}
       craGoalIgnoreFile: ${{ inputs.craGoalIgnoreFile }}
       craRuleIgnoreFile: ${{ inputs.craRuleIgnoreFile }}
