@@ -30,9 +30,9 @@ on:
         default: "abac0df06b644a9cabc6e44f55b3880e"
       profileID:
         type: string
-        description: "CRA scc v2 needs the Pofile ID as Input. This is the profile ID you want to scan with. Note IDs are region specific ensure you use a US one (Default: US IBM Cloud for Financial Services 1.2.0)"
+        description: "CRA scc v2 needs the Pofile ID as Input. This is the profile ID you want to scan with. Note IDs are region specific ensure you use a US one (Default: US IBM Cloud for Financial Services 1.3.0)"
         required: false
-        default: "4c67f813-8723-4029-8b44-848fb989899e"
+        default: "262b5a6d-9dea-400e-b61f-0fbd63883f78"
       craEnvironmentVariables:
         type: string
         description: "An optional list of environment variables to set for CRA, in comma seperated format 'VAR1=value1,VAR2=value2'. This can be used to provide TF_VAR's"
