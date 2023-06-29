@@ -58,7 +58,7 @@ This YAML file is usually located in your repository beside the code. A list of 
 ```yaml
 version: "v1"
 CRA_TARGETS:
-  - CRA_TARGET: "" # Target directory for CRA scan (comma-separated for multiple scans). If not provided, the CRA Scan will not be run.
+  - CRA_TARGET: "" # Target directory for CRA scan. If not provided, the CRA Scan will not be run.
     CRA_ENVIRONMENT_VARIABLES:  # An optional map of environment variables for CRA, where the key is the variable name and value is the value. Useful for providing TF_VARs.
       TF_VAR_sample: "sample value"
       TF_VAR_other:  "another value"
