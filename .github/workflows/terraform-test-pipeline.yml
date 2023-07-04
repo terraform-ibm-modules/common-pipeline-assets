@@ -12,12 +12,12 @@ on:
         required: false
       craTarget:
         type: string
-        description: "Target directory for CRA scan(accepts comma seperated list for multiple scans). If not provided CRA Scan will not be run"
+        description: "Target directory for CRA scan (accepts comma seperated list for multiple scans). If not provided CRA Scan will not be run"
         required: false
         default: ""
       craGoalIgnoreFile:
         type: string
-        description: "CRA Ignore file to use(Used for SCC v1). If not provided checks repo root directory for cra-tf-validate-ignore-goals.json"
+        description: "CRA Ignore file to use (Used for SCC v1). If not provided checks repo root directory for cra-tf-validate-ignore-goals.json"
         required: false
         default: "cra-tf-validate-ignore-goals.json"
       craRuleIgnoreFile:
@@ -30,16 +30,21 @@ on:
         description: "Use SCCv2 CRA run-cra-scc-v2.sh"
         required: false
         default: false
-      accountID:
+      instanceID:
         type: string
-        description: "CRA scc v2 needs the IBM Cloud Account ID as Input (Default GeDev)"
+        description: "The SCC instance ID to use to pull profile from for CRA (Default GeDev instance)"
         required: false
-        default: "abac0df06b644a9cabc6e44f55b3880e"
+        default: "1c7d5f78-9262-44c3-b779-b28fe4d88c37"
       profileID:
         type: string
-        description: "CRA scc v2 needs the Pofile ID as Input. This is the profile ID you want to scan with. Note IDs are region specific ensure you use a US one (Default: US IBM Cloud for Financial Services 1.2.0)"
+        description: "CRA scc v2 needs the Profile ID as Input. This is the profile ID you want to scan with. Note IDs are region specific ensure you use a US one (Default: US IBM Cloud for Financial Services 1.2.0)"
         required: false
         default: "4c67f813-8723-4029-8b44-848fb989899e"
+      sccRegion:
+        type: string
+        description: "The region that the SCC instance is in."
+        required: false
+        default: "us-south"
       craEnvironmentVariables:
         type: string
         description: "An optional list of environment variables to set for CRA, in comma seperated format 'VAR1=value1,VAR2=value2'. This can be used to provide TF_VAR's"
@@ -71,7 +76,8 @@ jobs:
         MZ_INGESTION_KEY: ${{ secrets.MZ_INGESTION_KEY }}
         TF_VAR_ibmcloud_api_key_ext: ${{ secrets.IBMCLOUD_API_KEY_GEStaging }}
         PROFILE_ID: ${{ inputs.profileID }}
-        ACCOUNT_ID: ${{ inputs.accountID }}
+        SCC_INSTANCE_ID: ${{ inputs.instanceID }}
+        SCC_REGION: ${{ inputs.sccRegion }}
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
@@ -98,7 +104,8 @@ jobs:
         run: |
           #!/bin/bash
           set -e
-          DEFAULT_ACCOUNT_ID="$ACCOUNT_ID"
+          DEFAULT_SCC_INSTANCE_ID="$SCC_INSTANCE_ID"
+          DEFAULT_SCC_REGION="$SCC_REGION"
           DEFAULT_PROFILE_ID="$PROFILE_ID"
 
           # Install CRA plugin if not detected
@@ -135,17 +142,30 @@ jobs:
                   export CRA_IGNORE_RULES_FILE="$(pwd)/cra-tf-validate-ignore-goals.json"
                 fi
 
-                ACCOUNT_ID=$(yq e ".CRA_TARGETS[$i].ACCOUNT_ID | select (.!=null)" "${{ inputs.craConfigYamlFile }}")
-                if [[ -z "${ACCOUNT_ID}" ]]; then
-                  ACCOUNT_ID="${DEFAULT_ACCOUNT_ID}"
-                  if [[ -z "${ACCOUNT_ID}" ]]; then
-                    echo "Error: No ACCOUNT_ID specified in the YAML config or as an environment variable."
+                SCC_INSTANCE_ID=$(yq e ".CRA_TARGETS[$i].SCC_INSTANCE_ID | select (.!=null)" "${{ inputs.craConfigYamlFile }}")
+                if [[ -z "${SCC_INSTANCE_ID}" ]]; then
+                  SCC_INSTANCE_ID="${DEFAULT_SCC_INSTANCE_ID}"
+                  if [[ -z "${SCC_INSTANCE_ID}" ]]; then
+                    echo "Error: No SCC_INSTANCE_ID specified in the YAML config or as an environment variable."
                     exit 1
                   else
-                    echo "ACCOUNT_ID ${ACCOUNT_ID} set from environment variable"
+                    echo "SCC_INSTANCE_ID ${SCC_INSTANCE_ID} set from environment variable"
                   fi
                 else
-                  echo "ACCOUNT_ID ${ACCOUNT_ID} set from config file ${{ inputs.craConfigYamlFile }}"
+                  echo "SCC_INSTANCE_ID ${SCC_INSTANCE_ID} set from config file ${{ inputs.craConfigYamlFile }}"
+                fi
+
+                SCC_REGION=$(yq e ".CRA_TARGETS[$i].SCC_REGION | select (.!=null)" "${{ inputs.craConfigYamlFile }}")
+                if [[ -z "${SCC_REGION}" ]]; then
+                  SCC_REGION="${DEFAULT_SCC_REGION}"
+                  if [[ -z "${SCC_REGION}" ]]; then
+                    echo "Error: No SCC_REGION specified in the YAML config or as an environment variable."
+                    exit 1
+                  else
+                    echo "SCC_REGION ${SCC_REGION} set from environment variable"
+                  fi
+                else
+                  echo "SCC_REGION ${SCC_REGION} set from config file ${{ inputs.craConfigYamlFile }}"
                 fi
 
                 PROFILE_ID=$(yq e ".CRA_TARGETS[$i].PROFILE_ID | select (.!=null)" "${{ inputs.craConfigYamlFile }}")
