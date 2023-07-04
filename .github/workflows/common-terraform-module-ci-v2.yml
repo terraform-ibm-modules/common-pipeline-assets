@@ -27,14 +27,14 @@ on:
         description: "Use SCCv2 CRA run-cra-scc-v2.sh"
         required: false
         default: false
-      accountID:
+      instanceID:
         type: string
-        description: "CRA scc v2 needs the IBM Cloud Account ID as Input (Default GeDev)"
+        description: "The SCC instance ID to use to pull profile from for CRA (Default GeDev instance)"
         required: false
-        default: "abac0df06b644a9cabc6e44f55b3880e"
+        default: "1c7d5f78-9262-44c3-b779-b28fe4d88c37"
       profileID:
         type: string
-        description: "CRA scc v2 needs the Pofile ID as Input. This is the profile ID you want to scan with. Note IDs are region specific ensure you use a US one (Default: US IBM Cloud for Financial Services 1.2.0)"
+        description: "CRA scc v2 needs the Profile ID as Input. This is the profile ID you want to scan with. Note IDs are region specific ensure you use a US one (Default: US IBM Cloud for Financial Services 1.3.0)"
         required: false
         default: "1453532c-212d-4e35-8bac-286e67633607"
       craEnvironmentVariables:
