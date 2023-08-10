@@ -34,9 +34,9 @@ on:
         default: "1c7d5f78-9262-44c3-b779-b28fe4d88c37"
       profileID:
         type: string
-        description: "CRA scc v2 needs the Profile ID as Input. This is the profile ID you want to scan with (Default: US IBM Cloud for Financial Services 1.3.0)"
+        description: "CRA scc v2 needs the Profile ID as Input. This is the profile ID you want to scan with (Default: US IBM Cloud for Financial Services 1.4.0)"
         required: false
-        default: "262b5a6d-9dea-400e-b61f-0fbd63883f78"
+        default: "0e6e7b5a-817d-4344-ab6f-e5d7a9c49520"
       sccRegion:
         type: string
         description: "The region that the SCC instance is in."
