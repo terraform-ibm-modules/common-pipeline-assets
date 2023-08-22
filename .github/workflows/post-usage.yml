@@ -26,13 +26,20 @@ jobs:
             cat response_body.json
             exit 1
           fi
-
+          echo "Response code: ${response}"
+          echo "Response Body:"
+          echo "----------------"
+          cat response_body.json
+          echo "----------------"
           user_in_team=$(jq -r '.state' response_body.json)
           echo "user_in_team=$user_in_team" >> $GITHUB_ENV
+          echo "user_in_team=$user_in_team"
+          echo "user_in_team variable=${{ env.user_in_team }}"
 
       - name: Post Comment and stop workflow if user is not a member
         run: |
           set -e
+          echo "user_in_team=${{ env.user_in_team }}"
           if [[ "${{ env.user_in_team }}" != "active" ]]; then
             response=$(curl -X POST -H "Authorization: Bearer ${{secrets.GITHUB_TOKEN}}" \
             -H "Accept: application/vnd.github.v3+json" \
@@ -47,5 +54,12 @@ jobs:
               exit 1
             fi
 
+            echo "Response code: ${response}"
+            echo "Response Body:"
+            echo "----------------"
+            cat response_body.json
+            echo "----------------"
             exit 1
+          else
+            echo "User is in team, continuing with workflow"
           fi
