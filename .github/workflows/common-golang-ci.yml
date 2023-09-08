@@ -51,6 +51,7 @@ jobs:
           submodules: true
           # Clone all branches and history
           fetch-depth: 0
+          ref: ${{ needs.start-pipeline.outputs.commit_id }}
       # run unit tests
       - name: Unit Tests
         run: |
