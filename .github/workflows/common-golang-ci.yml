@@ -55,6 +55,8 @@ jobs:
       # run unit tests
       - name: Unit Tests
         run: |
+          # set the safe directory to the current directory to avoid issues with git repo ownership
+          git config --global --add safe.directory $(pwd)
           make run-go-module-tests
 
   set-commit-status-ci-success:
