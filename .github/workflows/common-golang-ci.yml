@@ -47,7 +47,7 @@ jobs:
       # run unit tests
       - name: Unit Tests
         run: |
-         make run-tests
+          make run-go-module-tests
 
   set-commit-status-ci-success:
     needs: [ start-pipeline, trigger_ci, unit_tests ]
