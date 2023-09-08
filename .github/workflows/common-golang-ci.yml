@@ -44,6 +44,13 @@ jobs:
     container:
       image: icr.io/goldeneye_images/goldeneye-ci-image:stable
     steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          submodules: true
+          # Clone all branches and history
+          fetch-depth: 0
       # run unit tests
       - name: Unit Tests
         run: |
