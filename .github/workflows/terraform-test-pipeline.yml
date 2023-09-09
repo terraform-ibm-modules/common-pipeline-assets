@@ -80,7 +80,7 @@ jobs:
         SCC_REGION: ${{ inputs.sccRegion }}
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GH_TOKEN }}
           submodules: true
