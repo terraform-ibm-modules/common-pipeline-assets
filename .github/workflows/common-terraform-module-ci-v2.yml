@@ -98,6 +98,7 @@ jobs:
     with:
       checkout_commit: ${{ needs.start-pipeline.outputs.commit_id }}
       make_test_command: run-tests
+      tf_switch_dir: ${{ inputs.tfswitchDir }}
 
   trigger_infra_tests:
     needs: [start-pipeline, trigger_ci]
