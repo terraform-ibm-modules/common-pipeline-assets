@@ -44,9 +44,19 @@ jobs:
     container:
       image: icr.io/goldeneye_images/goldeneye-ci-image:stable
     steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          submodules: true
+          # Clone all branches and history
+          fetch-depth: 0
+          ref: ${{ needs.start-pipeline.outputs.commit_id }}
       # run unit tests
       - name: Unit Tests
         run: |
+          # set the safe directory to the current directory to avoid issues with git repo ownership
+          git config --global --add safe.directory $(pwd)
           make run-go-module-tests
 
   set-commit-status-ci-success:
