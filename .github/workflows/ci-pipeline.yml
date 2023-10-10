@@ -15,6 +15,11 @@ on:
         description: Make test command to run eg. run-test, run-go-module-tests. Skip if this is not set
         type: string
         required: false
+      tf_switch_dir:
+        description: Specify the location of a .tf file with the terraform constraint defined to automatically download the latest terraform version in the defined range. Defaults to the repos root level.
+        type: string
+        default: "."
+        required: false
 
 jobs:
   CI_Pipeline:
@@ -44,11 +49,12 @@ jobs:
         run: |
           chown -R $(id -u):$(id -g) $PWD
 
-      # Setup tools
-      - name: Setup tools
+      # Install dependencies
+      - name: Install dependencies
+        env:
+          TFSWITCH_DIRECTORY: ${{ inputs.tf_switch_dir }}
         run: |
-          pip install pre-commit
-          pre-commit install
+          make dependency-install-darwin-linux
 
       # run pre-commit against all files
       - name: Pre-commit
