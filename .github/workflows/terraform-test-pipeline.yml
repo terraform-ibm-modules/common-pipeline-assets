@@ -50,6 +50,10 @@ on:
         description: "An optional list of environment variables to set for CRA, in comma seperated format 'VAR1=value1,VAR2=value2'. This can be used to provide TF_VAR's"
         required: false
         default: ""
+      tfswitchDir:
+        type: string
+        description: "Specify the location of a .tf file with the terraform constraint defined to automatically download the latest terraform version in the defined range. Defaults to the repos root level."
+        default: "."
       GITHUB_BASE_REF:
         description: target branch merging into
         type: string
@@ -95,6 +99,8 @@ jobs:
 
       # Install dependencies
       - name: Install dependencies
+        env:
+          TFSWITCH_DIRECTORY: ${{ inputs.tfswitchDir }}
         run: |
           make dependency-install-darwin-linux
 
