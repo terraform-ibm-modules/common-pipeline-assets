@@ -25,6 +25,7 @@ To use this action in your GitHub workflow, you will need to provide input param
 | `sccRegion`               | The region in which the SCC instance is in.                                                                                      | No       | "us-south"                             |
 | `profileID`               | The Profile ID input for CRA SCC v2. Ensure to use a US-specific ID.                                                             | No       | "262b5a6d-9dea-400e-b61f-0fbd63883f78" |
 | `craEnvironmentVariables` | An optional list of environment variables for CRA in the format 'VAR1=value1,VAR2=value2'. Useful for providing TF_VARs.         | No       |                                        |
+| `tfswitchDir` | Specify the location of a .tf file with the terraform constraint defined to automatically download the latest terraform version in the defined range.   | No       |  Defaults to the repos root level (aka ".")                                      |
 | `GITHUB_BASE_REF`         | The target branch merging into.                                                                                                  | Yes      |                                        |
 | `GITHUB_HEAD_REF`         | The source branch coming from.                                                                                                   | Yes      |                                        |
 
