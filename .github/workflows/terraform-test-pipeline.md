@@ -50,7 +50,6 @@ The action uses several secrets that need to be configured at the ORG level:
 | `IBMCLOUD_API_KEY`     | IBM Cloud API Key.                         |
 | `IAC_GE_OPS_TOOLCHAIN_ID`| Toolchain ID for the IBM Cloud.            |
 | `MZ_INGESTION_KEY`     | Ingestion key for Mezmo Logs.              |
-| `IBMCLOUD_API_KEY_GEStaging`| IBM Cloud API key for staging environment. |
 
 ## CRA Config YAML
 The CRA Config YAML provides a more flexible and comprehensive way to specify the configuration for CRA scans. If this YAML file is provided, the corresponding sections of the YAML file will override the relevant input parameters, allowing for more customized scans.
