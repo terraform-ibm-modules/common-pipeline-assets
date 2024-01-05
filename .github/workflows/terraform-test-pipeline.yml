@@ -78,7 +78,6 @@ jobs:
         IC_API_KEY: ${{ secrets.IBMCLOUD_API_KEY }}
         TOOLCHAIN_ID: ${{ secrets.IAC_GE_OPS_TOOLCHAIN_ID }}
         MZ_INGESTION_KEY: ${{ secrets.MZ_INGESTION_KEY }}
-        TF_VAR_ibmcloud_api_key_ext: ${{ secrets.IBMCLOUD_API_KEY_GEStaging }}
         PROFILE_ID: ${{ inputs.profileID }}
         SCC_INSTANCE_ID: ${{ inputs.instanceID }}
         SCC_REGION: ${{ inputs.sccRegion }}
