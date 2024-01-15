@@ -76,7 +76,7 @@ jobs:
       env:
         TF_VAR_ibmcloud_api_key: ${{ secrets.IBMCLOUD_API_KEY }}
         IC_API_KEY: ${{ secrets.IBMCLOUD_API_KEY }}
-        TOOLCHAIN_ID: ${{ secrets.CRA_TOOLCHAIN_ID }}
+        TOOLCHAIN_ID: ${{ secrets.IAC_GE_OPS_TOOLCHAIN_ID }}
         MZ_INGESTION_KEY: ${{ secrets.MZ_INGESTION_KEY }}
         PROFILE_ID: ${{ inputs.profileID }}
         SCC_INSTANCE_ID: ${{ inputs.instanceID }}
