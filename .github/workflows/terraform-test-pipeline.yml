@@ -76,7 +76,7 @@ jobs:
       env:
         TF_VAR_ibmcloud_api_key: ${{ secrets.IBMCLOUD_API_KEY }}
         IC_API_KEY: ${{ secrets.IBMCLOUD_API_KEY }}
-        TOOLCHAIN_ID: ${{ secrets.IAC_GE_OPS_TOOLCHAIN_ID }}
+        TOOLCHAIN_ID: ${{ secrets.CRA_TOOLCHAIN_ID }}
         MZ_INGESTION_KEY: ${{ secrets.MZ_INGESTION_KEY }}
         PROFILE_ID: ${{ inputs.profileID }}
         SCC_INSTANCE_ID: ${{ inputs.instanceID }}
@@ -135,6 +135,20 @@ jobs:
                   fi
                 else
                   echo "CRA_TARGET ${CRA_TARGET} set from config file ${{ inputs.craConfigYamlFile }}"
+                fi
+
+                ENV_TOOLCHAIN_ID=${TOOLCHAIN_ID}
+                TOOLCHAIN_ID=$(yq e ".CRA_TARGETS[$i].TOOLCHAIN_ID | select (.!=null)" "${{ inputs.craConfigYamlFile }}")
+                if [[ -z "${TOOLCHAIN_ID}" ]]; then
+                  TOOLCHAIN_ID="${ENV_TOOLCHAIN_ID}"
+                  if [[ -z "${TOOLCHAIN_ID}" ]]; then
+                    echo "Error: No TOOLCHAIN_ID specified in the YAML config or as an environment variable."
+                    exit 1
+                  else
+                    echo "TOOLCHAIN_ID ${TOOLCHAIN_ID} set from environment variable"
+                  fi
+                else
+                  echo "TOOLCHAIN_ID ${TOOLCHAIN_ID} set from config file ${{ inputs.craConfigYamlFile }}"
                 fi
 
                 CRA_IGNORE_RULES_FILE=$(yq e ".CRA_TARGETS[$i].CRA_IGNORE_RULES_FILE | select (.!=null)" "${{ inputs.craConfigYamlFile }}")

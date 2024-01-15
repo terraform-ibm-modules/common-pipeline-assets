@@ -60,6 +60,7 @@ This YAML file is usually located in your repository beside the code. A list of 
 version: "v1"
 CRA_TARGETS:
   - CRA_TARGET: "" # Target directory for CRA scan. If not provided, the CRA Scan will not be run.
+    TOOLCHAIN_ID: "" # Optional: The ID of the toolchain to get the profile from. If not provided, Environment Variable CRA_TOOLCHAIN_ID value will be used.
     CRA_ENVIRONMENT_VARIABLES:  # An optional map of environment variables for CRA, where the key is the variable name and value is the value. Useful for providing TF_VARs.
       TF_VAR_sample: "sample value"
       TF_VAR_other:  "another value"
