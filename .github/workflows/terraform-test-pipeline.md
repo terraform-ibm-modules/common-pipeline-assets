@@ -45,11 +45,11 @@ This job primarily focuses on running infrastructure tests. In addition to check
 
 The action uses several secrets that need to be configured at the ORG level:
 
-| Secret Name            | Description                                |
-|------------------------|--------------------------------------------|
-| `IBMCLOUD_API_KEY`     | IBM Cloud API Key.                         |
-| `IAC_GE_OPS_TOOLCHAIN_ID`| Toolchain ID for the IBM Cloud.            |
-| `MZ_INGESTION_KEY`     | Ingestion key for Mezmo Logs.              |
+| Secret Name              | Description                                |
+|--------------------------|--------------------------------------------|
+| `IBMCLOUD_API_KEY`       | IBM Cloud API Key.                         |
+| `MZ_INGESTION_KEY`       | Ingestion key for Mezmo Logs.              |
+| `IAC_GE_OPS_TOOLCHAIN_ID`| A persistent toolchain ID for the account which the IBM Cloud API Key has access to. This is ignored if `TOOLCHAIN_ID` is explicitially set in the `cra-config.yaml`. |
 
 ## CRA Config YAML
 The CRA Config YAML provides a more flexible and comprehensive way to specify the configuration for CRA scans. If this YAML file is provided, the corresponding sections of the YAML file will override the relevant input parameters, allowing for more customized scans.
@@ -60,6 +60,7 @@ This YAML file is usually located in your repository beside the code. A list of 
 version: "v1"
 CRA_TARGETS:
   - CRA_TARGET: "" # Target directory for CRA scan. If not provided, the CRA Scan will not be run.
+    TOOLCHAIN_ID: "" # Optional: The ID of the toolchain to get the profile from. Must be from an account in which the apikey has access to. If not provided, Environment Variable TOOLCHAIN_ID value will be used.
     CRA_ENVIRONMENT_VARIABLES:  # An optional map of environment variables for CRA, where the key is the variable name and value is the value. Useful for providing TF_VARs.
       TF_VAR_sample: "sample value"
       TF_VAR_other:  "another value"
