@@ -83,7 +83,7 @@ jobs:
             export GIT_COMMITTER_DATE="$(git log -1 --format=%aD ${{ inputs.versionPrefix }}${SEMVER_VERSION})"
             git push origin "${{ inputs.versionPrefix }}${SEMVER_VERSION}" -f
           fi
-  
+
       - name: Create Issue on Failed workflow
         if: ${{ failure() }}
         run: |
