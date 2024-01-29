@@ -84,7 +84,7 @@ jobs:
             git push origin "${{ inputs.versionPrefix }}${SEMVER_VERSION}" -f
           fi
 
-      - name: Create Issue on Failed workflow
+      - name: Failure Alert
         if: ${{ failure() }}
         run: |
           response=$(curl -sL \
