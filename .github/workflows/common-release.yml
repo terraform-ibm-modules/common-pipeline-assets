@@ -62,7 +62,7 @@ jobs:
         run: |
           if [ ! -e "./package-lock.json" ]; then ln -s /tmp/package-lock.json package-lock.json; fi
           if [ ! -d "./node_modules" ]; then ln -s /tmp/node_modules node_modules; fi
-          bash -c "npx semantic-release --no-ci"
+          bash -c "npx semantic-release --no-ci --debug"
           echo "Release complete"
 
       - id: versionNumber
