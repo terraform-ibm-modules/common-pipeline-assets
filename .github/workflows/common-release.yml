@@ -39,17 +39,12 @@ jobs:
         with:
           node-version: '20'
 
-      # Workaround for https://github.com/actions/runner/issues/2033
-      - name: Set ownership
-        run: |
-          chown -R $(id -u):$(id -g) $PWD
-
       - name: Install dependencies
         run: npm install semantic-release
-          @semantic-release/changelog@6.0.3
-          @semantic-release/exec@6.0.3
-          @semantic-release/git@10.0.1
-          @semantic-release/github@9.2.6
+          @semantic-release/changelog
+          @semantic-release/exec
+          @semantic-release/git
+          @semantic-release/github
 
       # Release
       - name: Semantic Release
