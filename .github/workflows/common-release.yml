@@ -41,6 +41,13 @@ jobs:
         run: |
           chown -R $(id -u):$(id -g) $PWD
 
+      - name: Import GPG key
+        id: import-gpg
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.RELEASE_PRIVATE_PGP }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
       # Release
       - name: Semantic Release
         env:
@@ -61,8 +68,9 @@ jobs:
           echo "version=$SEMVER_VERSION" >> "$GITHUB_OUTPUT"
 
       # Setup GPG after release      https://github.com/semantic-release/semantic-release/issues/3065
-      - name: Import GPG key
-        id: import-gpg
+      - name: Import and configur GPG key
+        if: ${{ inputs.sign == true }}
+        id: import-config-gpg
         uses: crazy-max/ghaction-import-gpg@v6
         with:
           gpg_private_key: ${{ secrets.RELEASE_PRIVATE_PGP }}
