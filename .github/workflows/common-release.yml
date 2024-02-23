@@ -19,14 +19,13 @@ jobs:
   Semantic_Release:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
-    container:
-      image: icr.io/goldeneye_images/goldeneye-ci-image:stable
-      env:
-        GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        CATALOG_TEKTON_WEBHOOK_TOKEN: ${{ secrets.CATALOG_TEKTON_WEBHOOK_TOKEN }}
-        CATALOG_TEKTON_WEBHOOK_URL: ${{ secrets.CATALOG_TEKTON_WEBHOOK_URL }}
-        CATALOG_PUBLISH_APIKEY: ${{ secrets.CATALOG_PUBLISH_APIKEY }}
-        CATALOG_VALIDATION_APIKEY: ${{ secrets.CATALOG_VALIDATION_APIKEY }}
+
+    env:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      CATALOG_TEKTON_WEBHOOK_TOKEN: ${{ secrets.CATALOG_TEKTON_WEBHOOK_TOKEN }}
+      CATALOG_TEKTON_WEBHOOK_URL: ${{ secrets.CATALOG_TEKTON_WEBHOOK_URL }}
+      CATALOG_PUBLISH_APIKEY: ${{ secrets.CATALOG_PUBLISH_APIKEY }}
+      CATALOG_VALIDATION_APIKEY: ${{ secrets.CATALOG_VALIDATION_APIKEY }}
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -36,10 +35,21 @@ jobs:
           token: ${{ secrets.GH_TOKEN }}
           submodules: true
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       # Workaround for https://github.com/actions/runner/issues/2033
       - name: Set ownership
         run: |
           chown -R $(id -u):$(id -g) $PWD
+
+      - name: Install dependencies
+        run: npm install semantic-release
+          @semantic-release/changelog@6.0.3
+          @semantic-release/exec@6.0.3
+          @semantic-release/git@10.0.1
+          @semantic-release/github@9.2.6
 
       # Release
       - name: Semantic Release
@@ -52,9 +62,6 @@ jobs:
         run: |
           if [ ! -e "./package-lock.json" ]; then ln -s /tmp/package-lock.json package-lock.json; fi
           if [ ! -d "./node_modules" ]; then ln -s /tmp/node_modules node_modules; fi
-          git config --global commit.gpgsign false
-          git config --global tag.gpgSign false
-
           npx semantic-release
           echo "Release complete"
 
@@ -64,7 +71,7 @@ jobs:
           echo "version=$SEMVER_VERSION" >> "$GITHUB_OUTPUT"
 
       # Setup GPG after release      https://github.com/semantic-release/semantic-release/issues/3065
-      - name: Import and configure GPG key
+      - name: Import GPG key
         if: ${{ inputs.sign == true }}
         id: import-config-gpg
         uses: crazy-max/ghaction-import-gpg@v6
