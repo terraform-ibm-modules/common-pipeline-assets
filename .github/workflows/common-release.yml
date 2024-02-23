@@ -19,13 +19,14 @@ jobs:
   Semantic_Release:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
-
-    env:
-      GH_TOKEN: ${{ secrets.GH_TOKEN }}
-      CATALOG_TEKTON_WEBHOOK_TOKEN: ${{ secrets.CATALOG_TEKTON_WEBHOOK_TOKEN }}
-      CATALOG_TEKTON_WEBHOOK_URL: ${{ secrets.CATALOG_TEKTON_WEBHOOK_URL }}
-      CATALOG_PUBLISH_APIKEY: ${{ secrets.CATALOG_PUBLISH_APIKEY }}
-      CATALOG_VALIDATION_APIKEY: ${{ secrets.CATALOG_VALIDATION_APIKEY }}
+    container:
+      image: icr.io/goldeneye_images/goldeneye-ci-image:stable
+      env:
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        CATALOG_TEKTON_WEBHOOK_TOKEN: ${{ secrets.CATALOG_TEKTON_WEBHOOK_TOKEN }}
+        CATALOG_TEKTON_WEBHOOK_URL: ${{ secrets.CATALOG_TEKTON_WEBHOOK_URL }}
+        CATALOG_PUBLISH_APIKEY: ${{ secrets.CATALOG_PUBLISH_APIKEY }}
+        CATALOG_VALIDATION_APIKEY: ${{ secrets.CATALOG_VALIDATION_APIKEY }}
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -35,29 +36,10 @@ jobs:
           token: ${{ secrets.GH_TOKEN }}
           submodules: true
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
       # Workaround for https://github.com/actions/runner/issues/2033
       - name: Set ownership
         run: |
           chown -R $(id -u):$(id -g) $PWD
-
-      - name: Install dependencies
-        run: npm install semantic-release @semantic-release/changelog @semantic-release/exec @semantic-release/git @semantic-release/commit-analyzer @semantic-release/release-notes-generator @semantic-release/github
-
-      - name: Import and configure GPG key
-        if: ${{ inputs.sign == true }}
-        id: import-config-gpg
-        uses: crazy-max/ghaction-import-gpg@v6
-        with:
-          gpg_private_key: ${{ secrets.RELEASE_PRIVATE_PGP }}
-          passphrase: ${{ secrets.GPG_PASSPHRASE }}
-          git_config_global: true
-          git_user_signingkey: true
-          git_commit_gpgsign: true
-          git_tag_gpgsign: true
 
       # Release
       - name: Semantic Release
@@ -70,6 +52,8 @@ jobs:
         run: |
           if [ ! -e "./package-lock.json" ]; then ln -s /tmp/package-lock.json package-lock.json; fi
           if [ ! -d "./node_modules" ]; then ln -s /tmp/node_modules node_modules; fi
+          git config commit.gpgsign false
+
           npx semantic-release
           echo "Release complete"
 
@@ -79,32 +63,32 @@ jobs:
           echo "version=$SEMVER_VERSION" >> "$GITHUB_OUTPUT"
 
       # Setup GPG after release      https://github.com/semantic-release/semantic-release/issues/3065
-#      - name: Import and configure GPG key
-#        if: ${{ inputs.sign == true }}
-#        id: import-config-gpg
-#        uses: crazy-max/ghaction-import-gpg@v6
-#        with:
-#          gpg_private_key: ${{ secrets.RELEASE_PRIVATE_PGP }}
-#          passphrase: ${{ secrets.GPG_PASSPHRASE }}
-#          git_config_global: true
-#          git_user_signingkey: true
-#          git_commit_gpgsign: true
-#          git_tag_gpgsign: true
-#
-#      - name: Sign Tag
-#        if: ${{ inputs.sign == true }}
-#        env:
-#          SEMVER_VERSION: ${{steps.versionNumber.outputs.version}}
-#        run: |
-#          if [ -z "$SEMVER_VERSION" ]
-#          then
-#            echo "No Release Version Set. Skip tagging"
-#          else
-#            echo "Version: ${{ inputs.versionPrefix }}${SEMVER_VERSION}"
-#            git tag "${{ inputs.versionPrefix }}${SEMVER_VERSION}" "${{ inputs.versionPrefix }}${SEMVER_VERSION}" -f -s -m "Sign Tag"
-#            export GIT_COMMITTER_DATE="$(git log -1 --format=%aD ${{ inputs.versionPrefix }}${SEMVER_VERSION})"
-#            git push origin "${{ inputs.versionPrefix }}${SEMVER_VERSION}" -f
-#          fi
+      - name: Import and configure GPG key
+        if: ${{ inputs.sign == true }}
+        id: import-config-gpg
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.RELEASE_PRIVATE_PGP }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          git_config_global: true
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+          git_tag_gpgsign: true
+
+      - name: Sign Tag
+        if: ${{ inputs.sign == true }}
+        env:
+          SEMVER_VERSION: ${{steps.versionNumber.outputs.version}}
+        run: |
+          if [ -z "$SEMVER_VERSION" ]
+          then
+            echo "No Release Version Set. Skip tagging"
+          else
+            echo "Version: ${{ inputs.versionPrefix }}${SEMVER_VERSION}"
+            git tag "${{ inputs.versionPrefix }}${SEMVER_VERSION}" "${{ inputs.versionPrefix }}${SEMVER_VERSION}" -f -s -m "Sign Tag"
+            export GIT_COMMITTER_DATE="$(git log -1 --format=%aD ${{ inputs.versionPrefix }}${SEMVER_VERSION})"
+            git push origin "${{ inputs.versionPrefix }}${SEMVER_VERSION}" -f
+          fi
 
       - name: Failure Alert
         if: ${{ failure() }}
