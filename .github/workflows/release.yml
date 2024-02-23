@@ -7,7 +7,7 @@ on:
 
 jobs:
   call-release-pipeline:
-    uses: terraform-ibm-modules/common-pipeline-assets/.github/workflows/common-release.yml
+    uses: terraform-ibm-modules/common-pipeline-assets/.github/workflows/common-release.yml@main
     secrets: inherit
     with:
       sign: false
