@@ -7,7 +7,8 @@ on:
 
 jobs:
   call-release-pipeline:
-    uses: terraform-ibm-modules/common-pipeline-assets/.github/workflows/common-release.yml@main
+#    do not merge this update to point to @main
+    uses: terraform-ibm-modules/common-pipeline-assets/.github/workflows/common-release.yml
     secrets: inherit
     with:
       sign: false
