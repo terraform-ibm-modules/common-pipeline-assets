@@ -7,7 +7,8 @@ A repo to maintain common pipeline assets
 
 ## Common pipeline workflows
 
-The GitHub Actions workflows are called from the `.github/workflows` directory. The workflows use the following keywords and syntax:
+The GitHub Actions workflows are called from the `.github/workflows` directory.
+The workflows use the following keywords and syntax:
 
 - Call the reusable workflow by using the `uses` keyword.
     - Refer to the workflow with `{owner}/{repo}/.github/workflows/{filename}@{ref}`. `{ref}` is a release version, not a branch name, for security reasons. The `renovate` task updates the reference to the most recent semantic version of reusable workflows.
