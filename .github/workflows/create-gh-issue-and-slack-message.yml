@@ -21,9 +21,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
-
       - name: Create Github and Slack notifications
         run: |
           response=$(curl -sL \
