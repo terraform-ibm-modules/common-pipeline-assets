@@ -1,0 +1,48 @@
+name: Create-Notifications
+
+# Controls when the workflow will run
+on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_call:
+    inputs:
+      issue_title:
+        description: 'Title for the issue created about the failure'
+        required: false
+        type: string
+        default: 'Release Pipeline failed'
+      labels:
+        description: 'Labels applied to the issue created'
+        required: false
+        type: string
+        default: '"ci-pipeline"'
+
+jobs:
+  Create-Notifications:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create Github and Slack notifications
+        run: |
+          response=$(curl -sL \
+              -X POST \
+              -H "Accept: application/vnd.github.v3+json" \
+              -H "Authorization: Bearer ${{ secrets.GH_TOKEN }}" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              https://api.github.com/repos/${{ github.repository }}/issues \
+              -d '{"title":"${{ inputs.issue_title }}","body":"For details see: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}","labels":[${{ inputs.labels }}]}')
+          url=$(echo "$response" | jq -r '.html_url')
+          if [ ! -z "$url" ] && [ "$url" != "null" ]; then
+              echo "Issue successfully created"
+              notification_text=":ibm-warning-filled: Release Pipeline failed. For details see: $url."
+              if curl -s -X POST \
+                      -H 'Content-type: application/json' \
+                      -d '{"text":"'"$notification_text"'"}' \
+                      ${{ secrets.GE_SLACK_WEBHOOK_URL }} \
+                      -o /dev/null; then
+                  echo "Slack message successfully created"
+              else
+                  echo "Slack message creation failed"
+              fi
+          else
+              echo "Issue creation failed"
+          fi
