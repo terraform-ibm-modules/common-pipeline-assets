@@ -23,7 +23,7 @@ jobs:
     steps:
       - name: Create Github and Slack notifications
         run: |
-          current_date=$(date +"%D")
+          current_date=$(date +"%Y-%m-%d-%H:%M")
           response=$(curl -sL \
               -X POST \
               -H "Accept: application/vnd.github.v3+json" \
