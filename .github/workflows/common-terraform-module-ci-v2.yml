@@ -70,7 +70,7 @@ jobs:
     needs: [notify_requirements]
     # Only start if the run pipeline was posted by a collaborator
     # if: ${{ github.event.issue.pull_request && github.event.comment.body == '/run pipeline' }}
-    if: ${{ github.event.issue.pull_request && trim(github.event.comment.body) == '/run pipeline' }} # PRATEEK
+    if: ${{ github.event.issue.pull_request && (github.event.comment.body == '/run pipeline' || github.event.comment.body == '/run pipeline ') }} # PRATEEK
     uses: ./.github/workflows/get-latest-pr-details.yml
     with:
       github_token: ${{ github.token }}
