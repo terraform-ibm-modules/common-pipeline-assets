@@ -9,8 +9,7 @@ on:
 jobs:
   Notify-Contributor-Requirements:
     runs-on: ubuntu-latest
-    # if: ${{ github.event.issue.pull_request && github.event.comment.body == '/run pipeline' }}
-    if: ${{ github.event.issue.pull_request && (github.event.comment.body == '/run pipeline' || github.event.comment.body == '/run pipeline ') }} # PRATEEK
+    if: ${{ github.event.issue.pull_request && (github.event.comment.body == '/run pipeline' || github.event.comment.body == '/run pipeline ') }}
     steps:
       - name: Check Team Membership
         id: check_team
