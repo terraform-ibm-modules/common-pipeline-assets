@@ -19,6 +19,8 @@ jobs:
           -H "Accept: application/vnd.github.v3+json" \
           "https://api.github.com/orgs/${{github.event.organization.login}}/teams/${{inputs.required_team}}/memberships/${{github.actor}}"
 
+          # The '${{secrets.GITHUB_TOKEN}}' secret comes out of the box with GHA - See https://docs.github.com/en/actions/security-guides/automatic-token-authentication
+          # Since this secret  does not have enough permissions to run below api we use the '${{secrets.ORG_READER_GH_TOKEN}}' which is an org level secret that we own
           user_in_team=$(curl -X GET -H "Authorization: Bearer ${{secrets.ORG_READER_GH_TOKEN}}" \
           -H "Accept: application/vnd.github.v3+json" \
           "https://api.github.com/orgs/${{github.event.organization.login}}/teams/${{inputs.required_team}}/memberships/${{github.actor}}" | jq -r '.state')
@@ -29,6 +31,7 @@ jobs:
           set -e
           echo "user_in_team=${{ env.user_in_team }}"
           if [[ "${{ env.user_in_team }}" != "active" ]]; then
+            # The '${{secrets.GITHUB_TOKEN}}' secret comes out of the box with GHA - See https://docs.github.com/en/actions/security-guides/automatic-token-authentication
             response=$(curl -X POST -H "Authorization: Bearer ${{secrets.GITHUB_TOKEN}}" \
             -H "Accept: application/vnd.github.v3+json" \
             -w "%{http_code}" \
