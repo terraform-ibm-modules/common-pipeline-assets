@@ -58,7 +58,7 @@ jobs:
   notify_requirements:
     uses: ./.github/workflows/post-usage.yml
     secrets: inherit
-  
+
   test_message:
     runs-on: ubuntu-latest
     steps:
