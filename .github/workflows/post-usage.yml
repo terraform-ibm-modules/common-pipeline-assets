@@ -21,7 +21,7 @@ jobs:
 
           API_URL="https://api.github.com/orgs/${{github.event.organization.login}}/teams/${{inputs.required_team}}/memberships/${{github.actor}}"
           echo "Fetching the response for $API_URL"
-          
+
           api_response=$(curl -s -o response_body.json -w "%{http_code}" -X GET -H "Authorization: Bearer ${{secrets.ORG_READER_GH_TOKEN}}" \
           -H "Accept: application/vnd.github.v3+json" "$API_URL")
 
