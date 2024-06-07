@@ -59,13 +59,6 @@ jobs:
     uses: ./.github/workflows/post-usage.yml
     secrets: inherit
 
-  test_message:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Print a message
-      run: |
-        echo "Prateek: Testing if the right yaml is hit.!"
-
   start-pipeline:
     needs: [notify_requirements]
     # Only start if the run pipeline was posted by a collaborator
