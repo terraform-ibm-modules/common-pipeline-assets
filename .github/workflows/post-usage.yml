@@ -26,7 +26,7 @@ jobs:
           -H "Accept: application/vnd.github.v3+json" "$API_URL")
 
           # Log messages if API failure is observed
-          if [[ "$api_response" -ne 200 && "$api_response" -ne 201 ]]; then
+          if [[ "$api_response" -ne 200 || "$api_response" -ne 201 ]]; then
             echo "Error: Received HTTP status $api_response while checking team membership"
             echo "======================"
             cat response_body.json
