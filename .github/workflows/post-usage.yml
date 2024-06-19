@@ -14,7 +14,7 @@ jobs:
       - name: Check Team Membership
         id: check_team
         run: |
-          set -e
+          set -euo pipefail
 
           # The '${{secrets.GITHUB_TOKEN}}' secret comes out of the box with GHA - See https://docs.github.com/en/actions/security-guides/automatic-token-authentication
           # Since this secret  does not have enough permissions to run below api we use the '${{secrets.ORG_READER_GH_TOKEN}}' which is an org level secret that we own
@@ -26,10 +26,7 @@ jobs:
           -H "Accept: application/vnd.github.v3+json" "$API_URL")
 
           # Log messages if API failure is observed
-          # DELETE BELOW 2 LINEs
-          echo "URL FORMED IS $API_URL"
-          echo "THIS IS THE RESPONSE RECEIVED: $api_response" 
-          if [[ "$api_response" -ne 200 || "$api_response" -ne 201 ]]; then
+          if [[ "$api_response" -ne 200 && "$api_response" -ne 201 ]]; then
             echo "Error: Received HTTP status $api_response while checking team membership"
             echo "======================"
             cat response_body.json
