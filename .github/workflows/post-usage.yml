@@ -22,21 +22,20 @@ jobs:
           API_URL="https://api.github.com/orgs/${{github.event.organization.login}}/teams/${{inputs.required_team}}/memberships/${{github.actor}}"
           echo "Fetching the response for $API_URL"
 
-          api_response=$(curl -s -o response_body.json -w "%{http_code}" -X GET -H "Authorization: Bearer ${{secrets.ORG_READER_GH_TOKEN}}" \
+          api_response=$(curl -s -w "%{http_code}" -X GET -H "Authorization: Bearer ${{secrets.ORG_READER_GH_TOKEN}}" \
           -H "Accept: application/vnd.github.v3+json" "$API_URL")
 
           # Log messages if API failure is observed
-          if [[ "$api_response" -eq 404 ]];then
+          if [[ "$api_response" -ge 400 ]];then
             echo "======================"
-            echo "Error: User not found"
-            echo "======================"
-            exit 1
-          elif [[ "$api_response" -ne 200 && "$api_response" -ne 201 ]]; then
-            echo "Error: Received HTTP status $api_response while checking team membership!"
-            echo "======================"
-            cat response_body.json
-            echo "======================"
-            exit 1
+            if [[ "$api_response" -eq 404 ]]; then
+              echo "Error: User not found"
+            elif [[ "$api_response" -ge 500 ]]; then
+              echo "Error: Server error occurred (HTTP status $api_response)"
+            else
+              echo "Error: Received HTTP status $api_response while checking team membership!"
+              echo "======================"
+              exit 1
           fi
 
           # Extract the user's state
