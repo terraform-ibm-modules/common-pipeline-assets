@@ -35,7 +35,6 @@ jobs:
             else
               echo "Error: Received HTTP status $api_response while checking team membership!"
               echo "======================"
-              exit 1
             fi
           fi
 
@@ -45,7 +44,6 @@ jobs:
           # Log messages if the variable user_in_team is empty or null.
           if [[ -z $user_in_team || $user_in_team == "null" ]]; then
             echo "Error: Unable to retrieve team membership state"
-            exit 1
           fi
 
           echo "user_in_team=$user_in_team" >> $GITHUB_ENV
