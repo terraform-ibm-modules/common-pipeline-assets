@@ -19,7 +19,7 @@ jobs:
           # The '${{secrets.GITHUB_TOKEN}}' secret comes out of the box with GHA - See https://docs.github.com/en/actions/security-guides/automatic-token-authentication
           # Since this secret  does not have enough permissions to run below api we use the '${{secrets.ORG_READER_GH_TOKEN}}' which is an org level secret that we own
 
-          API_URL="https://api.github.com/orgs/${{github.event.organization.login}}/teams/${{inputs.required_team}}/memberships/${{github.actor}}-ibm"
+          API_URL="https://api.github.com/orgs/${{github.event.organization.login}}/teams/${{inputs.required_team}}/memberships/${{github.actor}}"
           echo "Fetching the response for $API_URL"
 
           api_response=$(curl -s -o response_body.json -w "%{http_code}" -X GET -H "Authorization: Bearer ${{secrets.ORG_READER_GH_TOKEN}}" \
