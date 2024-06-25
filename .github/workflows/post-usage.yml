@@ -9,22 +9,46 @@ on:
 jobs:
   Notify-Contributor-Requirements:
     runs-on: ubuntu-latest
-    if: ${{ github.event.issue.pull_request && github.event.comment.body == '/run pipeline' }}
+    if: ${{ github.event.issue.pull_request && (github.event.comment.body == '/run pipeline' || github.event.comment.body == '/run pipeline ') }}
     steps:
       - name: Check Team Membership
         id: check_team
         run: |
           set -e
-          curl -X GET -H "Authorization: Bearer ${{secrets.ORG_READER_GH_TOKEN}}" \
-          -H "Accept: application/vnd.github.v3+json" \
-          "https://api.github.com/orgs/${{github.event.organization.login}}/teams/${{inputs.required_team}}/memberships/${{github.actor}}"
 
           # The '${{secrets.GITHUB_TOKEN}}' secret comes out of the box with GHA - See https://docs.github.com/en/actions/security-guides/automatic-token-authentication
           # Since this secret  does not have enough permissions to run below api we use the '${{secrets.ORG_READER_GH_TOKEN}}' which is an org level secret that we own
-          user_in_team=$(curl -X GET -H "Authorization: Bearer ${{secrets.ORG_READER_GH_TOKEN}}" \
-          -H "Accept: application/vnd.github.v3+json" \
-          "https://api.github.com/orgs/${{github.event.organization.login}}/teams/${{inputs.required_team}}/memberships/${{github.actor}}" | jq -r '.state')
+
+          API_URL="https://api.github.com/orgs/${{github.event.organization.login}}/teams/${{inputs.required_team}}/memberships/${{github.actor}}"
+          echo "Fetching the response for $API_URL"
+
+          api_response=$(curl -s -o response_body.json -w "%{http_code}" -X GET -H "Authorization: Bearer ${{secrets.ORG_READER_GH_TOKEN}}" \
+          -H "Accept: application/vnd.github.v3+json" "$API_URL")
+
+          # Log messages if API failure is observed
+          if [[ "$api_response" -ge 400 ]];then
+            echo "======================"
+            if [[ "$api_response" -eq 404 ]]; then
+              echo "Error: User not found"
+            elif [[ "$api_response" -ge 500 ]]; then
+              echo "Error: Server error occurred (HTTP status $api_response)"
+            else
+              echo "Error: Received HTTP status $api_response while checking team membership!"
+              echo "======================"
+            fi
+          fi
+
+          # Extract the user's state
+          user_in_team=$(jq -r '.state' < response_body.json)
+
+          # Log messages if the variable user_in_team is empty or null.
+          if [[ -z $user_in_team || $user_in_team == "null" ]]; then
+            echo "Error: Unable to retrieve team membership state"
+          fi
+
           echo "user_in_team=$user_in_team" >> $GITHUB_ENV
+
+
 
       - name: Post Comment and stop workflow if user is not a member
         run: |
