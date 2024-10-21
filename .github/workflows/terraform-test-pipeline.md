@@ -48,7 +48,6 @@ The action uses several secrets that need to be configured at the ORG level:
 | Secret Name              | Description                                |
 |--------------------------|--------------------------------------------|
 | `IBMCLOUD_API_KEY`       | IBM Cloud API Key.                         |
-| `MZ_INGESTION_KEY`       | Ingestion key for Mezmo Logs.              |
 | `IAC_GE_OPS_TOOLCHAIN_ID`| A persistent toolchain ID for the account which the IBM Cloud API Key has access to. This is ignored if `TOOLCHAIN_ID` is explicitially set in the `cra-config.yaml`. |
 
 ## CRA Config YAML
