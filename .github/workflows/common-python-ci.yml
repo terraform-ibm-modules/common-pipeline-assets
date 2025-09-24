@@ -1,0 +1,284 @@
+name: Python-CI
+
+on:
+  workflow_call:
+    inputs:
+      python_version:
+        type: string
+        description: "Python version to use (auto-detected from pyproject.toml if present)"
+        required: false
+        default: ""
+      test_command:
+        type: string
+        description: "Custom test command to run (if not provided, auto-detects pytest, python -m pytest, or make test)"
+        required: false
+        default: ""
+      use_uv:
+        type: boolean
+        description: "Force use of uv package manager (auto-detected by default based on pyproject.toml)"
+        required: false
+        default: false
+      ruff_check:
+        type: boolean
+        description: "Enable ruff linting and formatting checks (auto-detected by default)"
+        required: false
+        default: true
+      requirements_file:
+        type: string
+        description: "Requirements file path for pip installations (default: requirements.txt)"
+        required: false
+        default: "requirements.txt"
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  notify_requirements:
+    uses: ./.github/workflows/post-usage.yml
+    secrets: inherit
+
+  start-pipeline:
+    needs: [notify_requirements]
+    # Only start if the run pipeline was posted by a collaborator
+    if: ${{ github.event.issue.pull_request && (github.event.comment.body == '/run pipeline' || github.event.comment.body == '/run pipeline ') }}
+    uses: ./.github/workflows/get-latest-pr-details.yml
+    with:
+      github_token: ${{ github.token }}
+
+  set-commit-status-ci-running:
+    uses: ./.github/workflows/set-commit-status.yml
+    needs: [ start-pipeline ]
+    with:
+      github_token: ${{ github.token }}
+      state: "pending"
+      description: "Running"
+      context: "CI Pipeline"
+      sha: ${{ needs.start-pipeline.outputs.commit_id }}
+      target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      github_repository: ${{ github.repository }}
+
+  detect-python-version:
+    needs: [ start-pipeline ]
+    runs-on: ubuntu-latest
+    outputs:
+      python-version: ${{ steps.detect.outputs.python-version }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          ref: ${{ needs.start-pipeline.outputs.commit_id }}
+
+      - name: Detect Python version
+        id: detect
+        run: |
+          # Use provided version if available
+          if [[ -n "${{ inputs.python_version }}" ]]; then
+            echo "python-version=${{ inputs.python_version }}" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Auto-detect from pyproject.toml using simple grep
+          if [[ -f "pyproject.toml" ]]; then
+            # Look for requires-python line and extract version
+            REQUIRES_LINE=$(grep -i "requires-python" pyproject.toml 2>/dev/null || echo "")
+
+            if [[ -n "$REQUIRES_LINE" ]]; then
+              # Extract version number from patterns like >=3.9, >=3.10, etc.
+              DETECTED_VERSION=$(echo "$REQUIRES_LINE" | grep -oE '[0-9]+\.[0-9]+' | head -1)
+
+              if [[ -n "$DETECTED_VERSION" ]]; then
+                echo "python-version=$DETECTED_VERSION" >> $GITHUB_OUTPUT
+              else
+                echo "python-version=3.11" >> $GITHUB_OUTPUT
+              fi
+            else
+              echo "python-version=3.11" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "python-version=3.11" >> $GITHUB_OUTPUT
+          fi
+
+  python_ci:
+    needs: [ start-pipeline, detect-python-version ]
+    runs-on: ubuntu-latest
+    container:
+      image: icr.io/goldeneye_images/goldeneye-ci-image:stable
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          submodules: true
+          # Clone all branches and history
+          fetch-depth: 0
+          ref: ${{ needs.start-pipeline.outputs.commit_id }}
+
+      # Workaround for https://github.com/actions/runner/issues/2033
+      - name: Set ownership
+        run: |
+          chown -R $(id -u):$(id -g) $PWD
+          git config --global --add safe.directory $(pwd)
+
+      # Set up Python
+      - name: Set up Python ${{ needs.detect-python-version.outputs.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ needs.detect-python-version.outputs.python-version }}
+
+      # Detect project type and install dependencies
+      - name: Install dependencies
+        run: |
+          # Detect if this is a modern Python project with pyproject.toml
+          if [[ -f "pyproject.toml" || "${{ inputs.use_uv }}" == "true" ]]; then
+            echo "Modern Python project detected - using uv"
+
+            # Install uv if not already available
+            if ! command -v uv &> /dev/null; then
+              curl -LsSf https://astral.sh/uv/install.sh | sh
+              export PATH="$HOME/.local/bin:$PATH"
+            fi
+
+            # Install dependencies with uv
+            if [[ -f "pyproject.toml" ]]; then
+              uv sync --dev
+            elif [[ -f "${{ inputs.requirements_file }}" ]]; then
+              uv pip install -r ${{ inputs.requirements_file }}
+            fi
+
+            # Install test dependencies
+            uv pip install pytest pytest-cov
+
+          else
+            echo "Traditional Python project detected - using pip"
+
+            # Upgrade pip
+            python -m pip install --upgrade pip
+
+            # Install dependencies
+            if [[ -f "${{ inputs.requirements_file }}" ]]; then
+              pip install -r ${{ inputs.requirements_file }}
+            fi
+
+            # Install test dependencies
+            pip install pytest pytest-cov
+
+            # Install dev dependencies if available
+            if [[ -f "requirements-dev.txt" ]]; then
+              pip install -r requirements-dev.txt
+            fi
+
+            # Install project in editable mode if setup.py exists
+            if [[ -f "setup.py" ]]; then
+              pip install -e .
+            fi
+          fi
+
+      # Run linting with ruff if available
+      - name: Lint with ruff
+        if: ${{ inputs.ruff_check }}
+        run: |
+          if [[ -f "pyproject.toml" || "${{ inputs.use_uv }}" == "true" ]]; then
+            # Check if ruff is configured in pyproject.toml or install it
+            if uv pip list | grep -q ruff || grep -q "ruff" pyproject.toml 2>/dev/null; then
+              echo "Running ruff checks..."
+              uv run ruff check . || echo "Ruff check completed with issues"
+              uv run ruff format --check . || echo "Ruff format check completed with issues"
+            else
+              echo "Ruff not configured, skipping lint checks"
+            fi
+          else
+            # Try to install and run ruff for traditional projects
+            pip install ruff || echo "Failed to install ruff, skipping"
+            if command -v ruff &> /dev/null; then
+              ruff check . || echo "Ruff check completed with issues"
+              ruff format --check . || echo "Ruff format check completed with issues"
+            fi
+          fi
+
+      # Run pre-commit if configured
+      - name: Run pre-commit
+        run: |
+          if [[ -f ".pre-commit-config.yaml" ]]; then
+            if [[ -f "pyproject.toml" || "${{ inputs.use_uv }}" == "true" ]]; then
+              uv pip install pre-commit
+              uv run pre-commit run --all-files || echo "Pre-commit completed with issues"
+            else
+              pip install pre-commit
+              pre-commit run --all-files || echo "Pre-commit completed with issues"
+            fi
+          else
+            echo "No pre-commit configuration found, skipping"
+          fi
+
+      # Run unit tests
+      - name: Unit Tests
+        run: |
+          # Use custom test command if provided
+          if [[ -n "${{ inputs.test_command }}" ]]; then
+            echo "Running custom test command: ${{ inputs.test_command }}"
+            ${{ inputs.test_command }}
+          else
+            # Auto-detect test command
+            if [[ -f "pyproject.toml" || "${{ inputs.use_uv }}" == "true" ]]; then
+              # Modern project - check for various test configurations
+              echo "Modern Python project detected - checking test configuration..."
+
+              # Check if there's a specific test command in pyproject.toml
+              if grep -q '\[tool\.pytest' pyproject.toml 2>/dev/null || \
+                 grep -q 'pytest' pyproject.toml 2>/dev/null || \
+                 grep -q 'test.*=' pyproject.toml 2>/dev/null; then
+                echo "Running tests with uv run pytest..."
+                uv run pytest --cov --cov-report=xml --cov-report=term-missing
+              # Check if there are test files/directories
+              elif [[ -d "tests" ]] || [[ -d "test" ]] || find . -name "*test*.py" -type f | head -1 | grep -q .; then
+                echo "Test files found, running uv run pytest..."
+                uv run pytest --cov --cov-report=xml --cov-report=term-missing
+              # Fallback to basic pytest
+              elif command -v pytest &> /dev/null; then
+                echo "Fallback: running uv run pytest..."
+                uv run pytest
+              else
+                echo "No test configuration found - trying basic pytest"
+                uv run pytest || echo "No tests found or pytest not configured"
+              fi
+            else
+              # Traditional project - try different test commands
+              if [[ -f "Makefile" ]] && grep -q "test:" Makefile; then
+                echo "Running make test..."
+                make test
+              elif command -v pytest &> /dev/null; then
+                echo "Running pytest..."
+                pytest --cov --cov-report=xml --cov-report=term-missing
+              elif [[ -f "tests" ]] && python -m pytest --version &> /dev/null; then
+                echo "Running python -m pytest..."
+                python -m pytest --cov --cov-report=xml --cov-report=term-missing
+              else
+                echo "No suitable test runner found"
+                exit 1
+              fi
+            fi
+          fi
+
+  set-commit-status-ci-success:
+    needs: [ start-pipeline, python_ci ]
+    if: ${{ success() }}
+    uses: ./.github/workflows/set-commit-status.yml
+    with:
+      github_token: ${{ github.token }}
+      state: "success"
+      description: "Complete - Success"
+      context: "CI Pipeline"
+      sha: ${{ needs.start-pipeline.outputs.commit_id }}
+      target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      github_repository: ${{ github.repository }}
+
+  set-commit-status-ci-failure:
+    needs: [ start-pipeline, python_ci ]
+    if: ${{ failure() }}
+    uses: ./.github/workflows/set-commit-status.yml
+    with:
+      github_token: ${{ github.token }}
+      state: "failure"
+      description: "Complete - Failure"
+      context: "CI Pipeline"
+      sha: ${{ needs.start-pipeline.outputs.commit_id }}
+      target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      github_repository: ${{ github.repository }}
