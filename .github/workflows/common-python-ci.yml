@@ -139,6 +139,7 @@ jobs:
             # Install dependencies with uv
             if [[ -f "pyproject.toml" ]]; then
               uv sync --dev
+              uv pip install -e ".[dev]"
             elif [[ -f "${{ inputs.requirements_file }}" ]]; then
               uv pip install -r ${{ inputs.requirements_file }}
             fi
