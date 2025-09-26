@@ -5,9 +5,9 @@ on:
     inputs:
       python_version:
         type: string
-        description: "Python version to use"
+        description: "Python version to use (auto-detected from pyproject.toml if present)"
         required: false
-        default: "3.11"
+        default: ""
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -35,8 +35,49 @@ jobs:
       target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       github_repository: ${{ github.repository }}
 
-  python_ci:
+  detect-python-version:
     needs: [ start-pipeline ]
+    runs-on: ubuntu-latest
+    outputs:
+      python-version: ${{ steps.detect.outputs.python-version }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          ref: ${{ needs.start-pipeline.outputs.commit_id }}
+
+      - name: Detect Python version
+        id: detect
+        run: |
+          # Use provided version if available
+          if [ -n "${{ inputs.python_version }}" ]; then
+            echo "python-version=${{ inputs.python_version }}" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Auto-detect from pyproject.toml
+          if [ -f "pyproject.toml" ]; then
+            # Look for requires-python line and extract version
+            REQUIRES_LINE=$(grep -i "requires-python" pyproject.toml 2>/dev/null || echo "")
+
+            if [ -n "$REQUIRES_LINE" ]; then
+              # Extract version number from patterns like >=3.9, >=3.10, etc.
+              DETECTED_VERSION=$(echo "$REQUIRES_LINE" | grep -oE '[0-9]+\.[0-9]+' | head -1)
+
+              if [ -n "$DETECTED_VERSION" ]; then
+                echo "python-version=$DETECTED_VERSION" >> $GITHUB_OUTPUT
+              else
+                echo "python-version=3.11" >> $GITHUB_OUTPUT
+              fi
+            else
+              echo "python-version=3.11" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "python-version=3.11" >> $GITHUB_OUTPUT
+          fi
+
+  python_ci:
+    needs: [ start-pipeline, detect-python-version ]
     runs-on: ubuntu-latest
     container:
       image: icr.io/goldeneye_images/goldeneye-ci-image:stable
@@ -57,10 +98,10 @@ jobs:
           git config --global --add safe.directory $(pwd)
 
       # Set up Python
-      - name: Set up Python ${{ inputs.python_version }}
+      - name: Set up Python ${{ needs.detect-python-version.outputs.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ inputs.python_version }}
+          python-version: ${{ needs.detect-python-version.outputs.python-version }}
 
       # Install dependencies and run tests
       - name: Install dependencies and run tests
