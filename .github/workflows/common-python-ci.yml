@@ -119,14 +119,17 @@ jobs:
             # Sync dependencies from pyproject.toml
             uv sync --dev
 
-            # Run linting
-            echo "Running ruff checks..."
-            uv run ruff check . || echo "Ruff check completed with issues"
-            uv run ruff format --check . || echo "Ruff format check completed with issues"
+            # Run pre-commit hooks
+            echo "Running pre-commit checks..."
+            if [ -f ".pre-commit-config.yaml" ]; then
+              uv run pre-commit run --all-files || echo "Pre-commit completed with issues"
+            else
+              echo "No pre-commit configuration found, skipping"
+            fi
 
             # Run tests
             echo "Running tests..."
-            uv run pytest --cov --cov-report=xml --cov-report=term-missing
+            uv run pytest
 
           else
             echo "Traditional Python project detected"
@@ -149,19 +152,22 @@ jobs:
             fi
 
             # Install test dependencies
-            pip install pytest pytest-cov
+            pip install pytest
 
-            # Install ruff for linting
-            pip install ruff
+            # Install pre-commit for linting and checks
+            pip install pre-commit
 
-            # Run linting
-            echo "Running ruff checks..."
-            ruff check . || echo "Ruff check completed with issues"
-            ruff format --check . || echo "Ruff format check completed with issues"
+            # Run pre-commit hooks
+            echo "Running pre-commit checks..."
+            if [ -f ".pre-commit-config.yaml" ]; then
+              pre-commit run --all-files || echo "Pre-commit completed with issues"
+            else
+              echo "No pre-commit configuration found, skipping"
+            fi
 
             # Run tests
             echo "Running tests..."
-            pytest --cov --cov-report=xml --cov-report=term-missing
+            pytest
           fi
 
   set-commit-status-ci-success:
