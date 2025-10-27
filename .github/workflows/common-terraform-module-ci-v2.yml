@@ -9,7 +9,7 @@ on:
         required: false
       craTarget:
         type: string
-        description: "Target directory for CRA scan(accepts comma seperated list for multiple scans). If not provided CRA Scan will not be run"
+        description: "Target directory for CRA scan(accepts comma separated list for multiple scans). If not provided CRA Scan will not be run"
         required: false
         default: ""
       craGoalIgnoreFile:
@@ -44,7 +44,7 @@ on:
         default: "us-south"
       craEnvironmentVariables:
         type: string
-        description: "An optional list of environment variables to set for CRA, in comma seperated format 'VAR1=value1,VAR2=value2'. This can be used to provide TF_VAR's"
+        description: "An optional list of environment variables to set for CRA, in comma separated format 'VAR1=value1,VAR2=value2'. This can be used to provide TF_VAR's"
         required: false
         default: ""
       tfswitchDir:
@@ -52,9 +52,11 @@ on:
         description: "Specify the location of a .tf file with the terraform constraint defined to automatically download the latest terraform version in the defined range. Defaults to the repos root level."
         default: "."
 
+#  Read and write permissions for all scopes for the GITHUB_TOKEN
+permissions: write-all
+
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-
   notify_requirements:
     uses: ./.github/workflows/post-usage.yml
     secrets: inherit
@@ -69,7 +71,7 @@ jobs:
 
   set-commit-status-ci-running:
     uses: ./.github/workflows/set-commit-status.yml
-    needs: [ start-pipeline ]
+    needs: [start-pipeline]
     with:
       github_token: ${{ github.token }}
       state: "pending"
@@ -81,7 +83,7 @@ jobs:
 
   set-commit-status-infra-running:
     uses: ./.github/workflows/set-commit-status.yml
-    needs: [ start-pipeline ]
+    needs: [start-pipeline]
     with:
       github_token: ${{ github.token }}
       state: "pending"
@@ -92,7 +94,12 @@ jobs:
       github_repository: ${{ github.repository }}
 
   trigger_ci:
-    needs: [start-pipeline, set-commit-status-ci-running, set-commit-status-infra-running]
+    needs:
+      [
+        start-pipeline,
+        set-commit-status-ci-running,
+        set-commit-status-infra-running,
+      ]
     uses: ./.github/workflows/ci-pipeline.yml
     secrets: inherit
     with:
@@ -146,7 +153,7 @@ jobs:
       github_repository: ${{ github.repository }}
 
   set-commit-status-ci-success:
-    needs: [ start-pipeline, trigger_ci ]
+    needs: [start-pipeline, trigger_ci]
     if: ${{ success() }}
     uses: ./.github/workflows/set-commit-status.yml
     with:
@@ -159,7 +166,7 @@ jobs:
       github_repository: ${{ github.repository }}
 
   set-commit-status-ci-failure:
-    needs: [ start-pipeline, trigger_ci ]
+    needs: [start-pipeline, trigger_ci]
     if: ${{ failure() }}
     uses: ./.github/workflows/set-commit-status.yml
     with:

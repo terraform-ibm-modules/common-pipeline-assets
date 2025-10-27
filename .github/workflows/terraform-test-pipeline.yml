@@ -12,7 +12,7 @@ on:
         required: false
       craTarget:
         type: string
-        description: "Target directory for CRA scan (accepts comma seperated list for multiple scans). If not provided CRA Scan will not be run"
+        description: "Target directory for CRA scan (accepts comma separated list for multiple scans). If not provided CRA Scan will not be run"
         required: false
         default: ""
       craGoalIgnoreFile:
@@ -47,7 +47,7 @@ on:
         default: "us-south"
       craEnvironmentVariables:
         type: string
-        description: "An optional list of environment variables to set for CRA, in comma seperated format 'VAR1=value1,VAR2=value2'. This can be used to provide TF_VAR's"
+        description: "An optional list of environment variables to set for CRA, in comma separated format 'VAR1=value1,VAR2=value2'. This can be used to provide TF_VAR's"
         required: false
         default: ""
       tfswitchDir:
@@ -277,9 +277,7 @@ jobs:
             done
           fi
 
-
-
-# run unit tests
+      # run unit tests
       - name: Unit Tests
         run: |
           export GITHUB_BASE_REF=${{inputs.GITHUB_BASE_REF}}
