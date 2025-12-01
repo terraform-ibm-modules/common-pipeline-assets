@@ -34,7 +34,7 @@ jobs:
         IC_API_KEY: ${{ secrets.IBMCLOUD_API_KEY }}
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           token: ${{ secrets.GH_TOKEN }}
           submodules: true
