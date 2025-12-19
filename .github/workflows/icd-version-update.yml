@@ -76,8 +76,8 @@ jobs:
             exit 1
           fi
 
-          # Convert to JSON array
-          VERSIONS_JSON=$(echo "$VERSIONS" | tr ' ' '\n' | jq -R -s 'split("\n") | map(select(length > 0))')
+          # Convert to JSON array (compact, single-line)
+          VERSIONS_JSON=$(echo "$VERSIONS" | tr ' ' '\n' | jq -R -s -c 'split("\n") | map(select(length > 0))')
 
           # Extract latest version from tests/pr_test.go
           if [ -f "tests/pr_test.go" ]; then
@@ -165,8 +165,8 @@ jobs:
           # Convert to space-separated list
           VERSIONS_SPACE=$(echo "$VERSIONS" | tr '\n' ' ' | xargs)
 
-          # Convert to JSON array
-          VERSIONS_JSON_ARRAY=$(echo "$VERSIONS" | jq -R -s 'split("\n") | map(select(length > 0))')
+          # Convert to JSON array (compact, single-line)
+          VERSIONS_JSON_ARRAY=$(echo "$VERSIONS" | jq -R -s -c 'split("\n") | map(select(length > 0))')
 
           # Get latest (first after reverse sort)
           LATEST=$(echo "$VERSIONS" | head -1)
