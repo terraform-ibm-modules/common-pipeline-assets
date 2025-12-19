@@ -547,6 +547,10 @@ jobs:
           _This PR was automatically created by the ICD Version Update workflow._
           _Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}_"
 
+          # Create labels if they don't exist
+          gh label create "automated-version-update" --description "Automated version update PR" --color "0E8A16" 2>/dev/null || true
+          gh label create "enhancement" --description "New feature or request" --color "A2EEEF" 2>/dev/null || true
+
           # Create PR
           gh pr create \
             --title "feat: update $SERVICE_TYPE supported versions to include $API_LATEST" \
