@@ -152,9 +152,24 @@ jobs:
             fi
           done
 
-          # The output is a table, not JSON. Parse the versions for the service type.
-          # Example output line: "postgresql   16   stable   preferred"
-          VERSIONS=$(echo "$DEPLOYABLES_OUTPUT" | grep -i "^$SERVICE_TYPE" | awk '{print $2}' | sort -V -r || echo "")
+          # The output is grouped by database type:
+          # Database Type:  postgresql
+          # Version   Status   Preferred
+          # 17        stable   true
+          # 16        stable   false
+          # ...
+          # Database Type:  mysql
+          # ...
+
+          # Extract versions for the specific service type using sed + awk
+          # First extract the section for our service type, then get version numbers
+          VERSIONS=$(echo "$DEPLOYABLES_OUTPUT" | \
+            sed -n "/Database Type:.*$SERVICE_TYPE/I,/Database Type:/p" | \
+            grep -E '^[0-9]+' | \
+            awk '{print $1}' | \
+            sort -V -r | tr '\n' ' ' | xargs)
+
+          echo "Parsed versions for $SERVICE_TYPE: $VERSIONS"
 
           if [ -z "$VERSIONS" ]; then
             echo "::warning::No versions found in API response"
