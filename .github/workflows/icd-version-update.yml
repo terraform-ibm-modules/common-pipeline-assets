@@ -131,12 +131,13 @@ jobs:
           for i in $(seq 1 $MAX_RETRIES); do
             echo "Attempt $i of $MAX_RETRIES..."
 
-            # Fetch all deployables (command doesn't take service type argument)
-            if DEPLOYABLES_JSON=$(ibmcloud cdb deployables-show --stable --json 2>&1); then
+            # Fetch all deployables (no flags - older plugin versions don't support them)
+            if DEPLOYABLES_OUTPUT=$(ibmcloud cdb deployables-show 2>&1); then
               echo "Successfully fetched deployables"
+              echo "Raw output preview: $(echo "$DEPLOYABLES_OUTPUT" | head -5)"
               break
             else
-              echo "Command failed with output: $DEPLOYABLES_JSON"
+              echo "Command failed with output: $DEPLOYABLES_OUTPUT"
             fi
 
             if [ $i -lt $MAX_RETRIES ]; then
@@ -145,18 +146,15 @@ jobs:
               RETRY_DELAY=$((RETRY_DELAY * 2))
             else
               echo "::error::Failed to fetch ICD versions after $MAX_RETRIES attempts"
-              echo "Last error: $DEPLOYABLES_JSON"
+              echo "Last error: $DEPLOYABLES_OUTPUT"
               echo "fetch_success=false" >> $GITHUB_OUTPUT
               exit 0
             fi
           done
 
-          # Parse stable versions for the specific service type
-          # The JSON structure is: { "deployables": [ { "type": "postgresql", "versions": [...] }, ... ] }
-          VERSIONS=$(echo "$DEPLOYABLES_JSON" | jq -r --arg svc "$SERVICE_TYPE" '
-            .deployables[]? | select(.type == $svc) | .versions[]? |
-            select(.status == "stable" or .status == null) | .version
-          ' 2>/dev/null | sort -V -r || echo "")
+          # The output is a table, not JSON. Parse the versions for the service type.
+          # Example output line: "postgresql   16   stable   preferred"
+          VERSIONS=$(echo "$DEPLOYABLES_OUTPUT" | grep -i "^$SERVICE_TYPE" | awk '{print $2}' | sort -V -r || echo "")
 
           if [ -z "$VERSIONS" ]; then
             echo "::warning::No versions found in API response"
