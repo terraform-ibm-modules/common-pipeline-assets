@@ -134,14 +134,17 @@ jobs:
             if VERSIONS_JSON=$(ibmcloud cdb deployables-show "$SERVICE_TYPE" --json 2>&1); then
               echo "Successfully fetched versions"
               break
+            else
+              echo "Command failed with output: $VERSIONS_JSON"
             fi
 
             if [ $i -lt $MAX_RETRIES ]; then
-              echo "Failed, retrying in ${RETRY_DELAY}s..."
+              echo "Retrying in ${RETRY_DELAY}s..."
               sleep $RETRY_DELAY
               RETRY_DELAY=$((RETRY_DELAY * 2))
             else
               echo "::error::Failed to fetch ICD versions after $MAX_RETRIES attempts"
+              echo "Last error: $VERSIONS_JSON"
               echo "fetch_success=false" >> $GITHUB_OUTPUT
               exit 0
             fi
