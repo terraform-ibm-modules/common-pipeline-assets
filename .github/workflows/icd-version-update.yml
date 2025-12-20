@@ -489,18 +489,28 @@ jobs:
             ./ci/install-deps.sh
           fi
 
-      - name: Run pre-commit hooks
+      - name: Run pre-commit hooks and apply fixes
         run: |
-          # Run pre-commit on the specific modified files only
-          # Using --show-diff-on-failure to see what changed
-          pre-commit run --files variables.tf ibm_catalog.json tests/pr_test.go || {
-            echo "::warning::Pre-commit hooks made additional changes or found issues"
-            # Show what changed
-            git diff --name-only
-          }
+          # Run pre-commit hooks on the modified files
+          # Some hooks auto-fix issues, so we run twice:
+          # 1. First run may fail but applies auto-fixes
+          # 2. Second run should pass with the fixes applied
 
-          # Stage only the files we intentionally modified (not any other changes in the repo)
+          echo "Running pre-commit hooks (first pass - may auto-fix)..."
+          pre-commit run --files variables.tf ibm_catalog.json tests/pr_test.go || true
+
+          # Stage any auto-fixed changes
           git add variables.tf ibm_catalog.json tests/pr_test.go 2>/dev/null || true
+
+          # Run again to verify all hooks pass
+          echo "Running pre-commit hooks (second pass - verification)..."
+          if ! pre-commit run --files variables.tf ibm_catalog.json tests/pr_test.go; then
+            echo "::error::Pre-commit hooks failed after auto-fix attempt"
+            git diff --name-only
+            exit 1
+          fi
+
+          echo "All pre-commit hooks passed!"
 
       - name: Commit changes
         env:
@@ -508,7 +518,7 @@ jobs:
           DEPRECATED_VERSIONS: ${{ needs.compare-versions.outputs.deprecated_versions }}
           API_LATEST: ${{ needs.fetch-versions.outputs.api_latest }}
         run: |
-          # Only add the specific files we modified
+          # Stage the files (including any pre-commit fixes)
           git add variables.tf ibm_catalog.json tests/pr_test.go
 
           # Build commit message
