@@ -416,8 +416,8 @@ jobs:
               echo "|---|---|"
               echo "| Versions | $API_VERSIONS |"
               echo "| Latest | $API_LATEST |"
-              [ -n "$NEW_VERSIONS" ] && echo "| New | $NEW_VERSIONS |"
-              [ -n "$DEPRECATED_VERSIONS" ] && echo "| Deprecated | $DEPRECATED_VERSIONS |"
+              [ -n "$NEW_VERSIONS" ] && echo "| New | $NEW_VERSIONS |" || true
+              [ -n "$DEPRECATED_VERSIONS" ] && echo "| Deprecated | $DEPRECATED_VERSIONS |" || true
             else
               echo ":white_check_mark: Versions up to date"
             fi
