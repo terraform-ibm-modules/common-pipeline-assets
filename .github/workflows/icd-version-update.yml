@@ -177,14 +177,14 @@ jobs:
             exit 0
           fi
 
-          # Convert to space-separated list
-          VERSIONS_SPACE=$(echo "$VERSIONS" | tr '\n' ' ' | xargs)
+          # VERSIONS is already space-separated from the pipeline above
+          VERSIONS_SPACE="$VERSIONS"
 
           # Convert to JSON array (compact, single-line)
-          VERSIONS_JSON_ARRAY=$(echo "$VERSIONS" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          VERSIONS_JSON_ARRAY=$(echo "$VERSIONS" | tr ' ' '\n' | jq -R -s -c 'split("\n") | map(select(length > 0))')
 
-          # Get latest (first after reverse sort)
-          LATEST=$(echo "$VERSIONS" | head -1)
+          # Get latest (first version in the sorted list)
+          LATEST=$(echo "$VERSIONS" | awk '{print $1}')
 
           echo "Found versions: $VERSIONS_SPACE"
           echo "Latest version: $LATEST"
@@ -463,8 +463,8 @@ jobs:
             git diff --name-only
           }
 
-          # Stage any fixes made by pre-commit (e.g., formatting)
-          git add -A
+          # Stage only the files we intentionally modified (not any other changes in the repo)
+          git add variables.tf ibm_catalog.json tests/pr_test.go 2>/dev/null || true
 
       - name: Commit changes
         env:
@@ -472,7 +472,8 @@ jobs:
           DEPRECATED_VERSIONS: ${{ needs.compare-versions.outputs.deprecated_versions }}
           API_LATEST: ${{ needs.fetch-versions.outputs.api_latest }}
         run: |
-          git add -A
+          # Only add the specific files we modified
+          git add variables.tf ibm_catalog.json tests/pr_test.go
 
           # Build commit message
           COMMIT_MSG="feat: update ${{ inputs.icd_service_type }} supported versions"
