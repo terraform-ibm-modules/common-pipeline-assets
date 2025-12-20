@@ -325,18 +325,23 @@ jobs:
           DEPRECATED_VERSIONS: ${{ needs.compare-versions.outputs.deprecated_versions }}
           SERVICE_TYPE: ${{ inputs.icd_service_type }}
         run: |
+          # Format versions with commas
+          VERSIONS_FMT=$(echo "$API_VERSIONS" | tr ' ' ',')
+          NEW_FMT=$(echo "$NEW_VERSIONS" | tr ' ' ',')
+          DEPRECATED_FMT=$(echo "$DEPRECATED_VERSIONS" | tr ' ' ',')
+
           PR_BODY="## Summary
           This PR automatically updates supported $SERVICE_TYPE versions based on IBM Cloud Databases API.
 
           ### Version Changes
           | Type | Value |
           |------|-------|
-          | **Supported Versions** | $API_VERSIONS |
+          | **Supported Versions** | $VERSIONS_FMT |
           | **Latest Version** | $API_LATEST |"
           [ -n "$NEW_VERSIONS" ] && PR_BODY="$PR_BODY
-          | **Added** | $NEW_VERSIONS |"
+          | **Added** | $NEW_FMT |"
           [ -n "$DEPRECATED_VERSIONS" ] && PR_BODY="$PR_BODY
-          | **Removed** | $DEPRECATED_VERSIONS |"
+          | **Removed** | $DEPRECATED_FMT |"
 
           PR_BODY="$PR_BODY
 
@@ -414,10 +419,10 @@ jobs:
               echo ":rocket: **Changes detected**"
               echo "| | |"
               echo "|---|---|"
-              echo "| Versions | $API_VERSIONS |"
+              echo "| Versions | $(echo "$API_VERSIONS" | tr ' ' ',') |"
               echo "| Latest | $API_LATEST |"
-              [ -n "$NEW_VERSIONS" ] && echo "| New | $NEW_VERSIONS |" || true
-              [ -n "$DEPRECATED_VERSIONS" ] && echo "| Deprecated | $DEPRECATED_VERSIONS |" || true
+              [ -n "$NEW_VERSIONS" ] && echo "| New | $(echo "$NEW_VERSIONS" | tr ' ' ',') |" || true
+              [ -n "$DEPRECATED_VERSIONS" ] && echo "| Deprecated | $(echo "$DEPRECATED_VERSIONS" | tr ' ' ',') |" || true
             else
               echo ":white_check_mark: Versions up to date"
             fi
