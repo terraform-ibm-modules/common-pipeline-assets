@@ -234,37 +234,41 @@ jobs:
           # Convert versions to array
           IFS=' ' read -ra VERSION_ARRAY <<< "$API_VERSIONS"
 
-          # Update variables.tf
-          if [ -f "variables.tf" ]; then
-            # Build validation conditions
-            CONDITION_LINES="      var.${VERSION_VAR_NAME} == null,"
-            for v in "${VERSION_ARRAY[@]}"; do
-              CONDITION_LINES="${CONDITION_LINES}\n      var.${VERSION_VAR_NAME} == \"$v\","
-            done
-            CONDITION_LINES=$(echo -e "$CONDITION_LINES" | sed '$ s/,$//')
+          # Build validation conditions and error message
+          CONDITION_LINES="      var.${VERSION_VAR_NAME} == null,"
+          for v in "${VERSION_ARRAY[@]}"; do
+            CONDITION_LINES="${CONDITION_LINES}\n      var.${VERSION_VAR_NAME} == \"$v\","
+          done
+          CONDITION_LINES=$(echo -e "$CONDITION_LINES" | sed '$ s/,$//')
+          VERSION_LIST=$(printf '%s, ' "${VERSION_ARRAY[@]}" | sed 's/, $//; s/, \([^,]*\)$/, or \1/')
+          ERROR_MSG="Version must be $VERSION_LIST. If no value passed, the current ICD preferred version is used."
 
-            # Build error message: "13, 14, 15, 16, 17, or 18"
-            VERSION_LIST=$(printf '%s, ' "${VERSION_ARRAY[@]}" | sed 's/, $//; s/, \([^,]*\)$/, or \1/')
-            ERROR_MSG="Version must be $VERSION_LIST. If no value passed, the current ICD preferred version is used."
-
-            awk -v var_name="$VERSION_VAR_NAME" -v new_conditions="$CONDITION_LINES" -v new_error="$ERROR_MSG" '
-            BEGIN { in_var=0; in_validation=0; skip_until_close=0 }
-            /^variable "'"$VERSION_VAR_NAME"'"/ { in_var=1 }
-            in_var && /validation \{/ { in_validation=1 }
-            in_var && in_validation && /condition = anytrue\(\[/ {
-              print "    condition = anytrue(["
-              print new_conditions
-              skip_until_close=1
-              next
-            }
-            skip_until_close && /\]\)/ { print "    ])"; skip_until_close=0; next }
-            skip_until_close { next }
-            in_var && in_validation && /error_message =/ { print "    error_message = \"" new_error "\""; next }
-            in_var && in_validation && /^\s*\}/ { in_validation=0 }
-            in_var && /^\}$/ { in_var=0 }
-            { print }
-            ' variables.tf > variables.tf.tmp && mv variables.tf.tmp variables.tf
-          fi
+          # Find and update all .tf files with version validation blocks
+          UPDATED_TF_FILES=""
+          for tf_file in $(find . -name "*.tf" -type f ! -path "./.terraform/*"); do
+            if grep -q "var\.${VERSION_VAR_NAME} == \"" "$tf_file"; then
+              echo "Updating validation in: $tf_file"
+              awk -v var_name="$VERSION_VAR_NAME" -v new_conditions="$CONDITION_LINES" -v new_error="$ERROR_MSG" '
+              BEGIN { in_var=0; in_validation=0; skip_until_close=0 }
+              /^variable "'"$VERSION_VAR_NAME"'"/ { in_var=1 }
+              in_var && /validation \{/ { in_validation=1 }
+              in_var && in_validation && /condition = anytrue\(\[/ {
+                print "    condition = anytrue(["
+                print new_conditions
+                skip_until_close=1
+                next
+              }
+              skip_until_close && /\]\)/ { print "    ])"; skip_until_close=0; next }
+              skip_until_close { next }
+              in_var && in_validation && /error_message =/ { print "    error_message = \"" new_error "\""; next }
+              in_var && in_validation && /^\s*\}/ { in_validation=0 }
+              in_var && /^\}$/ { in_var=0 }
+              { print }
+              ' "$tf_file" > "${tf_file}.tmp" && mv "${tf_file}.tmp" "$tf_file"
+              UPDATED_TF_FILES="$UPDATED_TF_FILES $tf_file"
+            fi
+          done
+          echo "updated_tf_files=$UPDATED_TF_FILES" >> $GITHUB_OUTPUT
 
           # Update ibm_catalog.json
           if [ -f "ibm_catalog.json" ]; then
@@ -281,6 +285,8 @@ jobs:
           fi
 
       - name: Install dependencies and run pre-commit
+        env:
+          UPDATED_TF_FILES: ${{ steps.update.outputs.updated_tf_files }}
         run: |
           git submodule update --init --recursive
           pip install pre-commit
@@ -290,10 +296,13 @@ jobs:
           echo "$CUSTOM_DIRECTORY" >> $GITHUB_PATH
           [ -f "ci/install-deps.sh" ] && chmod +x ci/install-deps.sh && ./ci/install-deps.sh
 
+          # Build list of files to check
+          FILES_TO_CHECK="ibm_catalog.json tests/pr_test.go $UPDATED_TF_FILES"
+
           # Run pre-commit twice: first to apply fixes, second to verify
-          pre-commit run --files variables.tf ibm_catalog.json tests/pr_test.go || true
-          git add variables.tf ibm_catalog.json tests/pr_test.go 2>/dev/null || true
-          pre-commit run --files variables.tf ibm_catalog.json tests/pr_test.go
+          pre-commit run --files $FILES_TO_CHECK || true
+          git add $FILES_TO_CHECK 2>/dev/null || true
+          pre-commit run --files $FILES_TO_CHECK
 
       - name: Commit and push
         env:
@@ -301,8 +310,9 @@ jobs:
           DEPRECATED_VERSIONS: ${{ needs.compare-versions.outputs.deprecated_versions }}
           API_LATEST: ${{ needs.fetch-versions.outputs.api_latest }}
           SERVICE_TYPE: ${{ inputs.icd_service_type }}
+          UPDATED_TF_FILES: ${{ steps.update.outputs.updated_tf_files }}
         run: |
-          git add variables.tf ibm_catalog.json tests/pr_test.go
+          git add ibm_catalog.json tests/pr_test.go $UPDATED_TF_FILES
 
           COMMIT_MSG="feat: update $SERVICE_TYPE supported versions"
           [ -n "$NEW_VERSIONS" ] && COMMIT_MSG="$COMMIT_MSG
