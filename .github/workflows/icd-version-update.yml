@@ -459,18 +459,40 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          cache: false
+
       - name: Initialize submodules
         run: |
           git submodule update --init --recursive
 
-      - name: Install pre-commit
+      - name: Install dependencies
         run: |
+          # Install pre-commit
           pip install pre-commit
+
+          # Install tools required by pre-commit hooks
+          # Using CUSTOM_DIRECTORY to install to a writable location
+          export CUSTOM_DIRECTORY="${HOME}/.local/bin"
+          mkdir -p "${CUSTOM_DIRECTORY}"
+          echo "${CUSTOM_DIRECTORY}" >> $GITHUB_PATH
+
+          # Run the dependency installer script
+          if [ -f "ci/install-deps.sh" ]; then
+            chmod +x ci/install-deps.sh
+            ./ci/install-deps.sh
+          fi
 
       - name: Run pre-commit hooks
         run: |
-          # Run pre-commit on all modified files
-          # This ensures the automated changes pass all checks
+          # Run pre-commit on the specific modified files only
+          # Using --show-diff-on-failure to see what changed
           pre-commit run --files variables.tf ibm_catalog.json tests/pr_test.go || {
             echo "::warning::Pre-commit hooks made additional changes or found issues"
             # Show what changed
