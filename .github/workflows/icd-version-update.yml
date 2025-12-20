@@ -344,8 +344,18 @@ jobs:
             # Remove trailing comma
             CONDITION_LINES=$(echo -e "$CONDITION_LINES" | sed '$ s/,$//')
 
-            # Build error message
-            VERSION_LIST=$(IFS=', '; echo "${VERSION_ARRAY[*]}")
+            # Build error message with proper formatting (e.g., "13, 14, 15, 16, 17, or 18")
+            LAST_IDX=$((${#VERSION_ARRAY[@]} - 1))
+            VERSION_LIST=""
+            for i in "${!VERSION_ARRAY[@]}"; do
+              if [ $i -eq $LAST_IDX ]; then
+                VERSION_LIST="${VERSION_LIST}or ${VERSION_ARRAY[$i]}"
+              elif [ $i -eq $((LAST_IDX - 1)) ]; then
+                VERSION_LIST="${VERSION_LIST}${VERSION_ARRAY[$i]}, "
+              else
+                VERSION_LIST="${VERSION_LIST}${VERSION_ARRAY[$i]}, "
+              fi
+            done
             ERROR_MSG="Version must be $VERSION_LIST. If no value passed, the current ICD preferred version is used."
 
             # Use a temporary file for the awk replacement
@@ -623,30 +633,32 @@ jobs:
     steps:
       - name: Write summary
         env:
-          FETCH_SUCCESS: ${{ needs.fetch-versions.outputs.fetch_success }}
-          HAS_CHANGES: ${{ needs.compare-versions.outputs.has_changes }}
-          API_VERSIONS: ${{ needs.fetch-versions.outputs.api_versions }}
-          API_LATEST: ${{ needs.fetch-versions.outputs.api_latest }}
-          NEW_VERSIONS: ${{ needs.compare-versions.outputs.new_versions }}
-          DEPRECATED_VERSIONS: ${{ needs.compare-versions.outputs.deprecated_versions }}
+          FETCH_SUCCESS: ${{ needs.fetch-versions.outputs.fetch_success || 'false' }}
+          HAS_CHANGES: ${{ needs.compare-versions.outputs.has_changes || 'false' }}
+          API_VERSIONS: ${{ needs.fetch-versions.outputs.api_versions || '' }}
+          API_LATEST: ${{ needs.fetch-versions.outputs.api_latest || '' }}
+          NEW_VERSIONS: ${{ needs.compare-versions.outputs.new_versions || '' }}
+          DEPRECATED_VERSIONS: ${{ needs.compare-versions.outputs.deprecated_versions || '' }}
         run: |
-          echo "## ICD Version Check Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Service:** ${{ inputs.icd_service_type }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Dry Run:** ${{ inputs.dry_run }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## ICD Version Check Summary"
+            echo ""
+            echo "**Service:** ${{ inputs.icd_service_type }}"
+            echo "**Dry Run:** ${{ inputs.dry_run }}"
+            echo ""
 
-          if [ "$FETCH_SUCCESS" != "true" ]; then
-            echo ":warning: **API fetch failed** - Unable to retrieve versions from IBM Cloud" >> $GITHUB_STEP_SUMMARY
-          elif [ "$HAS_CHANGES" == "true" ]; then
-            echo ":rocket: **Changes detected!**" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
-            echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-            echo "| API Versions | $API_VERSIONS |" >> $GITHUB_STEP_SUMMARY
-            echo "| Latest | $API_LATEST |" >> $GITHUB_STEP_SUMMARY
-            [ -n "$NEW_VERSIONS" ] && echo "| New | $NEW_VERSIONS |" >> $GITHUB_STEP_SUMMARY
-            [ -n "$DEPRECATED_VERSIONS" ] && echo "| Deprecated | $DEPRECATED_VERSIONS |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo ":white_check_mark: **No changes detected** - Versions are up to date" >> $GITHUB_STEP_SUMMARY
-          fi
+            if [ "$FETCH_SUCCESS" != "true" ]; then
+              echo ":warning: **API fetch failed** - Unable to retrieve versions from IBM Cloud"
+            elif [ "$HAS_CHANGES" == "true" ]; then
+              echo ":rocket: **Changes detected!**"
+              echo ""
+              echo "| Property | Value |"
+              echo "|----------|-------|"
+              echo "| API Versions | $API_VERSIONS |"
+              echo "| Latest | $API_LATEST |"
+              if [ -n "$NEW_VERSIONS" ]; then echo "| New | $NEW_VERSIONS |"; fi
+              if [ -n "$DEPRECATED_VERSIONS" ]; then echo "| Deprecated | $DEPRECATED_VERSIONS |"; fi
+            else
+              echo ":white_check_mark: **No changes detected** - Versions are up to date"
+            fi
+          } >> $GITHUB_STEP_SUMMARY
