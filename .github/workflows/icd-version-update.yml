@@ -163,11 +163,12 @@ jobs:
 
           # Extract versions for the specific service type using sed + awk
           # First extract the section for our service type, then get version numbers
+          # Sort ascending to match the original file order
           VERSIONS=$(echo "$DEPLOYABLES_OUTPUT" | \
             sed -n "/Database Type:.*$SERVICE_TYPE/I,/Database Type:/p" | \
             grep -E '^[0-9]+' | \
             awk '{print $1}' | \
-            sort -V -r | tr '\n' ' ' | xargs)
+            sort -V | tr '\n' ' ' | xargs)
 
           echo "Parsed versions for $SERVICE_TYPE: $VERSIONS"
 
@@ -183,8 +184,8 @@ jobs:
           # Convert to JSON array (compact, single-line)
           VERSIONS_JSON_ARRAY=$(echo "$VERSIONS" | tr ' ' '\n' | jq -R -s -c 'split("\n") | map(select(length > 0))')
 
-          # Get latest (first version in the sorted list)
-          LATEST=$(echo "$VERSIONS" | awk '{print $1}')
+          # Get latest (last version in the ascending-sorted list)
+          LATEST=$(echo "$VERSIONS" | awk '{print $NF}')
 
           echo "Found versions: $VERSIONS_SPACE"
           echo "Latest version: $LATEST"
@@ -297,6 +298,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          # Checkout from default branch, not the triggering branch
+          # This prevents workflow file changes from being included in the PR
+          ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 0
           token: ${{ github.token }}
 
