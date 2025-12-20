@@ -43,57 +43,38 @@ permissions:
 
 jobs:
   extract-current-versions:
-    name: Extract Current Versions from Codebase
+    name: Extract Current Versions
     runs-on: ubuntu-latest
     outputs:
-      current_versions: ${{ steps.extract.outputs.current_versions }}
       current_versions_json: ${{ steps.extract.outputs.current_versions_json }}
       current_latest: ${{ steps.extract.outputs.current_latest }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Extract versions from codebase
         id: extract
         env:
           VERSION_VAR_NAME: ${{ inputs.version_variable_name || format('{0}_version', inputs.icd_service_type) }}
         run: |
-          echo "Extracting current versions from codebase..."
-          echo "Looking for variable: $VERSION_VAR_NAME"
-
           # Extract versions from variables.tf validation block
-          # Pattern: var.postgresql_version == "17"
-          if [ -f "variables.tf" ]; then
-            VERSIONS=$(grep -oP "var\.${VERSION_VAR_NAME} == \"\K[0-9.]+" variables.tf | sort -V | tr '\n' ' ' | xargs)
-            echo "Found versions in variables.tf: $VERSIONS"
-          else
+          if [ ! -f "variables.tf" ]; then
             echo "::error::variables.tf not found"
             exit 1
           fi
 
+          VERSIONS=$(grep -oP "var\.${VERSION_VAR_NAME} == \"\K[0-9.]+" variables.tf | sort -V | tr '\n' ' ' | xargs)
           if [ -z "$VERSIONS" ]; then
             echo "::error::No versions found in variables.tf for variable $VERSION_VAR_NAME"
             exit 1
           fi
 
-          # Convert to JSON array (compact, single-line)
+          # Convert to JSON array
           VERSIONS_JSON=$(echo "$VERSIONS" | tr ' ' '\n' | jq -R -s -c 'split("\n") | map(select(length > 0))')
 
-          # Extract latest version from tests/pr_test.go
-          if [ -f "tests/pr_test.go" ]; then
-            LATEST=$(grep -oP 'const latestVersion = "\K[0-9.]+' tests/pr_test.go || echo "")
-          fi
+          # Get latest from tests or use highest version
+          LATEST=$(grep -oP 'const latestVersion = "\K[0-9.]+' tests/pr_test.go 2>/dev/null || echo "$VERSIONS" | awk '{print $NF}')
 
-          # If no latestVersion in tests, use the highest version from the list
-          if [ -z "$LATEST" ]; then
-            LATEST=$(echo "$VERSIONS" | tr ' ' '\n' | sort -V | tail -1)
-            echo "No latestVersion in tests, using highest: $LATEST"
-          fi
-
-          echo "Current versions: $VERSIONS"
-          echo "Current latest: $LATEST"
-
-          echo "current_versions=$VERSIONS" >> $GITHUB_OUTPUT
+          echo "Current versions: $VERSIONS (latest: $LATEST)"
           echo "current_versions_json=$VERSIONS_JSON" >> $GITHUB_OUTPUT
           echo "current_latest=$LATEST" >> $GITHUB_OUTPUT
 
@@ -106,15 +87,12 @@ jobs:
       api_latest: ${{ steps.fetch.outputs.api_latest }}
       fetch_success: ${{ steps.fetch.outputs.fetch_success }}
     steps:
-      - name: Install IBM Cloud CLI
-        run: |
-          curl -fsSL https://clis.cloud.ibm.com/install/linux | sh
-          ibmcloud plugin install cloud-databases -f
-
-      - name: Login to IBM Cloud
+      - name: Setup IBM Cloud CLI
         env:
           IBMCLOUD_API_KEY: ${{ secrets.IBMCLOUD_API_KEY }}
         run: |
+          curl -fsSL https://clis.cloud.ibm.com/install/linux | sh
+          ibmcloud plugin install cloud-databases -f
           ibmcloud login --apikey "$IBMCLOUD_API_KEY" -r us-south --quiet
 
       - name: Fetch available versions
@@ -122,76 +100,35 @@ jobs:
         env:
           SERVICE_TYPE: ${{ inputs.icd_service_type }}
         run: |
-          echo "Fetching available versions for $SERVICE_TYPE..."
-
-          # Retry logic with exponential backoff
-          MAX_RETRIES=3
-          RETRY_DELAY=10
-
-          for i in $(seq 1 $MAX_RETRIES); do
-            echo "Attempt $i of $MAX_RETRIES..."
-
-            # Fetch all deployables (no flags - older plugin versions don't support them)
+          # Retry with exponential backoff
+          for i in 1 2 3; do
             if DEPLOYABLES_OUTPUT=$(ibmcloud cdb deployables-show 2>&1); then
-              echo "Successfully fetched deployables"
-              echo "Raw output preview: $(echo "$DEPLOYABLES_OUTPUT" | head -5)"
               break
-            else
-              echo "Command failed with output: $DEPLOYABLES_OUTPUT"
             fi
-
-            if [ $i -lt $MAX_RETRIES ]; then
-              echo "Retrying in ${RETRY_DELAY}s..."
-              sleep $RETRY_DELAY
-              RETRY_DELAY=$((RETRY_DELAY * 2))
-            else
-              echo "::error::Failed to fetch ICD versions after $MAX_RETRIES attempts"
-              echo "Last error: $DEPLOYABLES_OUTPUT"
+            [ $i -lt 3 ] && sleep $((10 * i)) || {
+              echo "::error::Failed to fetch ICD versions after 3 attempts"
               echo "fetch_success=false" >> $GITHUB_OUTPUT
               exit 0
-            fi
+            }
           done
 
-          # The output is grouped by database type:
-          # Database Type:  postgresql
-          # Version   Status   Preferred
-          # 17        stable   true
-          # 16        stable   false
-          # ...
-          # Database Type:  mysql
-          # ...
-
-          # Extract versions for the specific service type using sed + awk
-          # First extract the section for our service type, then get version numbers
-          # Sort ascending to match the original file order
+          # Extract versions for service type (sorted ascending)
           VERSIONS=$(echo "$DEPLOYABLES_OUTPUT" | \
             sed -n "/Database Type:.*$SERVICE_TYPE/I,/Database Type:/p" | \
-            grep -E '^[0-9]+' | \
-            awk '{print $1}' | \
-            sort -V | tr '\n' ' ' | xargs)
-
-          echo "Parsed versions for $SERVICE_TYPE: $VERSIONS"
+            grep -E '^[0-9]+' | awk '{print $1}' | sort -V | tr '\n' ' ' | xargs)
 
           if [ -z "$VERSIONS" ]; then
-            echo "::warning::No versions found in API response"
+            echo "::warning::No versions found for $SERVICE_TYPE"
             echo "fetch_success=false" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          # VERSIONS is already space-separated from the pipeline above
-          VERSIONS_SPACE="$VERSIONS"
-
-          # Convert to JSON array (compact, single-line)
-          VERSIONS_JSON_ARRAY=$(echo "$VERSIONS" | tr ' ' '\n' | jq -R -s -c 'split("\n") | map(select(length > 0))')
-
-          # Get latest (last version in the ascending-sorted list)
+          VERSIONS_JSON=$(echo "$VERSIONS" | tr ' ' '\n' | jq -R -s -c 'split("\n") | map(select(length > 0))')
           LATEST=$(echo "$VERSIONS" | awk '{print $NF}')
 
-          echo "Found versions: $VERSIONS_SPACE"
-          echo "Latest version: $LATEST"
-
-          echo "api_versions=$VERSIONS_SPACE" >> $GITHUB_OUTPUT
-          echo "api_versions_json=$VERSIONS_JSON_ARRAY" >> $GITHUB_OUTPUT
+          echo "API versions: $VERSIONS (latest: $LATEST)"
+          echo "api_versions=$VERSIONS" >> $GITHUB_OUTPUT
+          echo "api_versions_json=$VERSIONS_JSON" >> $GITHUB_OUTPUT
           echo "api_latest=$LATEST" >> $GITHUB_OUTPUT
           echo "fetch_success=true" >> $GITHUB_OUTPUT
 
@@ -204,7 +141,6 @@ jobs:
       has_changes: ${{ steps.compare.outputs.has_changes }}
       new_versions: ${{ steps.compare.outputs.new_versions }}
       deprecated_versions: ${{ steps.compare.outputs.deprecated_versions }}
-      latest_changed: ${{ steps.compare.outputs.latest_changed }}
     steps:
       - name: Compare versions
         id: compare
@@ -214,44 +150,21 @@ jobs:
           CURRENT_LATEST: ${{ needs.extract-current-versions.outputs.current_latest }}
           API_LATEST: ${{ needs.fetch-versions.outputs.api_latest }}
         run: |
-          echo "Current versions: $CURRENT_VERSIONS"
-          echo "API versions: $API_VERSIONS"
-          echo "Current latest: $CURRENT_LATEST"
-          echo "API latest: $API_LATEST"
-
-          # Parse JSON arrays
           CURRENT_SET=$(echo "$CURRENT_VERSIONS" | jq -r '.[]' | sort)
           API_SET=$(echo "$API_VERSIONS" | jq -r '.[]' | sort)
 
-          # Find new versions (in API but not in current)
           NEW_VERSIONS=$(comm -23 <(echo "$API_SET") <(echo "$CURRENT_SET") | tr '\n' ' ' | xargs)
-
-          # Find deprecated versions (in current but not in API)
           DEPRECATED_VERSIONS=$(comm -13 <(echo "$API_SET") <(echo "$CURRENT_SET") | tr '\n' ' ' | xargs)
 
-          # Check if latest version changed
-          if [ "$CURRENT_LATEST" != "$API_LATEST" ]; then
-            LATEST_CHANGED="true"
+          if [ -n "$NEW_VERSIONS" ] || [ -n "$DEPRECATED_VERSIONS" ] || [ "$CURRENT_LATEST" != "$API_LATEST" ]; then
+            echo "Changes detected: new=[$NEW_VERSIONS] deprecated=[$DEPRECATED_VERSIONS] latest=$CURRENT_LATEST->$API_LATEST"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
           else
-            LATEST_CHANGED="false"
-          fi
-
-          # Determine if there are any changes
-          if [ -n "$NEW_VERSIONS" ] || [ -n "$DEPRECATED_VERSIONS" ] || [ "$LATEST_CHANGED" == "true" ]; then
-            HAS_CHANGES="true"
-            echo "Changes detected!"
-            echo "  New versions: $NEW_VERSIONS"
-            echo "  Deprecated versions: $DEPRECATED_VERSIONS"
-            echo "  Latest changed: $LATEST_CHANGED (from $CURRENT_LATEST to $API_LATEST)"
-          else
-            HAS_CHANGES="false"
             echo "No changes detected"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
           fi
-
-          echo "has_changes=$HAS_CHANGES" >> $GITHUB_OUTPUT
           echo "new_versions=$NEW_VERSIONS" >> $GITHUB_OUTPUT
           echo "deprecated_versions=$DEPRECATED_VERSIONS" >> $GITHUB_OUTPUT
-          echo "latest_changed=$LATEST_CHANGED" >> $GITHUB_OUTPUT
 
   check-existing-pr:
     name: Check for Existing PR
@@ -259,30 +172,21 @@ jobs:
     if: needs.compare-versions.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     outputs:
-      existing_pr: ${{ steps.check.outputs.existing_pr }}
       should_create: ${{ steps.check.outputs.should_create }}
+      existing_pr: ${{ steps.check.outputs.existing_pr }}
     steps:
-      - name: Check for existing open PR
+      - name: Check for existing PR
         id: check
         env:
           GH_TOKEN: ${{ github.token }}
-          SERVICE_TYPE: ${{ inputs.icd_service_type }}
         run: |
-          # Search for existing open PRs with the automated label
-          EXISTING_PR=$(gh pr list \
-            --repo "${{ github.repository }}" \
-            --state open \
-            --label "automated-version-update" \
-            --json number,headRefName \
-            --jq '.[0].number // empty' 2>/dev/null || echo "")
-
+          EXISTING_PR=$(gh pr list --repo "${{ github.repository }}" --state open \
+            --label "automated-version-update" --json number --jq '.[0].number // empty' 2>/dev/null || echo "")
           if [ -n "$EXISTING_PR" ]; then
             echo "Found existing PR: #$EXISTING_PR"
-            echo "existing_pr=$EXISTING_PR" >> $GITHUB_OUTPUT
             echo "should_create=false" >> $GITHUB_OUTPUT
+            echo "existing_pr=$EXISTING_PR" >> $GITHUB_OUTPUT
           else
-            echo "No existing PR found"
-            echo "existing_pr=" >> $GITHUB_OUTPUT
             echo "should_create=true" >> $GITHUB_OUTPUT
           fi
 
@@ -298,67 +202,51 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # Checkout from default branch, not the triggering branch
-          # This prevents workflow file changes from being included in the PR
           ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 0
-          token: ${{ github.token }}
 
-      - name: Configure Git
+      - name: Setup tools
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: hashicorp/setup-terraform@v3
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          cache: false
+
+      - name: Create branch and update files
+        id: update
+        env:
+          API_VERSIONS: ${{ needs.fetch-versions.outputs.api_versions }}
+          API_LATEST: ${{ needs.fetch-versions.outputs.api_latest }}
+          VERSION_VAR_NAME: ${{ inputs.version_variable_name || format('{0}_version', inputs.icd_service_type) }}
         run: |
+          # Configure git
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Create update branch
-        id: branch
-        run: |
+          # Create branch
           BRANCH_NAME="automation/icd-version-update-$(date +%Y%m%d-%H%M%S)"
           git checkout -b "$BRANCH_NAME"
           echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
 
-      - name: Update files
-        env:
-          API_VERSIONS: ${{ needs.fetch-versions.outputs.api_versions }}
-          API_LATEST: ${{ needs.fetch-versions.outputs.api_latest }}
-          SERVICE_TYPE: ${{ inputs.icd_service_type }}
-          VERSION_VAR_NAME: ${{ inputs.version_variable_name || format('{0}_version', inputs.icd_service_type) }}
-        run: |
-          echo "Updating files with versions: $API_VERSIONS"
-          echo "Latest version: $API_LATEST"
-          echo "Variable name: $VERSION_VAR_NAME"
-
-          # Convert space-separated versions to array
+          # Convert versions to array
           IFS=' ' read -ra VERSION_ARRAY <<< "$API_VERSIONS"
 
-          # ============================================
-          # 1. Update root variables.tf validation block
-          # ============================================
+          # Update variables.tf
           if [ -f "variables.tf" ]; then
-            echo "Updating variables.tf..."
-
-            # Build the new validation condition
+            # Build validation conditions
             CONDITION_LINES="      var.${VERSION_VAR_NAME} == null,"
             for v in "${VERSION_ARRAY[@]}"; do
               CONDITION_LINES="${CONDITION_LINES}\n      var.${VERSION_VAR_NAME} == \"$v\","
             done
-            # Remove trailing comma
             CONDITION_LINES=$(echo -e "$CONDITION_LINES" | sed '$ s/,$//')
 
-            # Build error message with proper formatting (e.g., "13, 14, 15, 16, 17, or 18")
-            LAST_IDX=$((${#VERSION_ARRAY[@]} - 1))
-            VERSION_LIST=""
-            for i in "${!VERSION_ARRAY[@]}"; do
-              if [ $i -eq $LAST_IDX ]; then
-                VERSION_LIST="${VERSION_LIST}or ${VERSION_ARRAY[$i]}"
-              elif [ $i -eq $((LAST_IDX - 1)) ]; then
-                VERSION_LIST="${VERSION_LIST}${VERSION_ARRAY[$i]}, "
-              else
-                VERSION_LIST="${VERSION_LIST}${VERSION_ARRAY[$i]}, "
-              fi
-            done
+            # Build error message: "13, 14, 15, 16, 17, or 18"
+            VERSION_LIST=$(printf '%s, ' "${VERSION_ARRAY[@]}" | sed 's/, $//; s/, \([^,]*\)$/, or \1/')
             ERROR_MSG="Version must be $VERSION_LIST. If no value passed, the current ICD preferred version is used."
 
-            # Use a temporary file for the awk replacement
             awk -v var_name="$VERSION_VAR_NAME" -v new_conditions="$CONDITION_LINES" -v new_error="$ERROR_MSG" '
             BEGIN { in_var=0; in_validation=0; skip_until_close=0 }
             /^variable "'"$VERSION_VAR_NAME"'"/ { in_var=1 }
@@ -369,177 +257,64 @@ jobs:
               skip_until_close=1
               next
             }
-            skip_until_close && /\]\)/ {
-              print "    ])"
-              skip_until_close=0
-              next
-            }
+            skip_until_close && /\]\)/ { print "    ])"; skip_until_close=0; next }
             skip_until_close { next }
-            in_var && in_validation && /error_message =/ {
-              print "    error_message = \"" new_error "\""
-              next
-            }
+            in_var && in_validation && /error_message =/ { print "    error_message = \"" new_error "\""; next }
             in_var && in_validation && /^\s*\}/ { in_validation=0 }
             in_var && /^\}$/ { in_var=0 }
             { print }
             ' variables.tf > variables.tf.tmp && mv variables.tf.tmp variables.tf
-
-            echo "  Updated variables.tf"
           fi
 
-          # ============================================
-          # 2. Update ibm_catalog.json
-          # ============================================
+          # Update ibm_catalog.json
           if [ -f "ibm_catalog.json" ]; then
-            echo "Updating ibm_catalog.json..."
+            OPTIONS_JSON=$(printf '%s\n' "${VERSION_ARRAY[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0) | {displayname: ., value: .})')
 
-            # Build options array as JSON
-            OPTIONS_JSON="["
-            for v in "${VERSION_ARRAY[@]}"; do
-              OPTIONS_JSON="${OPTIONS_JSON}{\"displayname\": \"$v\", \"value\": \"$v\"},"
-            done
-            OPTIONS_JSON="${OPTIONS_JSON%,}]"
-
-            # Use jq to update all occurrences
-            jq --argjson opts "$OPTIONS_JSON" \
-               --arg latest "$API_LATEST" \
-               --arg var_name "$VERSION_VAR_NAME" '
-              .products[].flavors[]?.configuration? |= (
-                if . then
-                  map(
-                    if .key == $var_name then
-                      .options = $opts | .default_value = $latest
-                    else
-                      .
-                    end
-                  )
-                else
-                  .
-                end
-              )
+            jq --argjson opts "$OPTIONS_JSON" --arg latest "$API_LATEST" --arg var_name "$VERSION_VAR_NAME" '
+              .products[].flavors[]?.configuration? |= (if . then map(if .key == $var_name then .options = $opts | .default_value = $latest else . end) else . end)
             ' ibm_catalog.json > ibm_catalog.json.tmp && mv ibm_catalog.json.tmp ibm_catalog.json
-
-            echo "  Updated ibm_catalog.json"
           fi
 
-          # ============================================
-          # 3. Update tests/pr_test.go latestVersion
-          # ============================================
+          # Update tests/pr_test.go
           if [ -f "tests/pr_test.go" ]; then
-            echo "Updating tests/pr_test.go..."
-
             sed -i "s/const latestVersion = \"[0-9.]*\"/const latestVersion = \"$API_LATEST\"/" tests/pr_test.go
-
-            echo "  Updated tests/pr_test.go"
           fi
 
-          echo "File updates complete!"
-
-      - name: Verify updates
-        run: |
-          echo "=== Verification ==="
-
-          if [ -f "variables.tf" ]; then
-            echo "--- variables.tf validation block ---"
-            grep -A 15 'variable "${{ inputs.version_variable_name || format('{0}_version', inputs.icd_service_type) }}"' variables.tf | head -20 || true
-          fi
-
-          if [ -f "ibm_catalog.json" ]; then
-            echo "--- ibm_catalog.json version options (first occurrence) ---"
-            jq '.products[0].flavors[0].configuration[] | select(.key == "${{ inputs.version_variable_name || format('{0}_version', inputs.icd_service_type) }}") | {key, default_value, options}' ibm_catalog.json 2>/dev/null || true
-          fi
-
-          if [ -f "tests/pr_test.go" ]; then
-            echo "--- tests/pr_test.go latestVersion ---"
-            grep 'const latestVersion' tests/pr_test.go || true
-          fi
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: 'stable'
-          cache: false
-
-      - name: Initialize submodules
+      - name: Install dependencies and run pre-commit
         run: |
           git submodule update --init --recursive
-
-      - name: Install dependencies
-        run: |
-          # Install pre-commit
           pip install pre-commit
 
-          # Install tools required by pre-commit hooks
-          # Using CUSTOM_DIRECTORY to install to a writable location
           export CUSTOM_DIRECTORY="${HOME}/.local/bin"
-          mkdir -p "${CUSTOM_DIRECTORY}"
-          echo "${CUSTOM_DIRECTORY}" >> $GITHUB_PATH
+          mkdir -p "$CUSTOM_DIRECTORY"
+          echo "$CUSTOM_DIRECTORY" >> $GITHUB_PATH
+          [ -f "ci/install-deps.sh" ] && chmod +x ci/install-deps.sh && ./ci/install-deps.sh
 
-          # Run the dependency installer script
-          if [ -f "ci/install-deps.sh" ]; then
-            chmod +x ci/install-deps.sh
-            ./ci/install-deps.sh
-          fi
-
-      - name: Run pre-commit hooks and apply fixes
-        run: |
-          # Run pre-commit hooks on the modified files
-          # Some hooks auto-fix issues, so we run twice:
-          # 1. First run may fail but applies auto-fixes
-          # 2. Second run should pass with the fixes applied
-
-          echo "Running pre-commit hooks (first pass - may auto-fix)..."
+          # Run pre-commit twice: first to apply fixes, second to verify
           pre-commit run --files variables.tf ibm_catalog.json tests/pr_test.go || true
-
-          # Stage any auto-fixed changes
           git add variables.tf ibm_catalog.json tests/pr_test.go 2>/dev/null || true
+          pre-commit run --files variables.tf ibm_catalog.json tests/pr_test.go
 
-          # Run again to verify all hooks pass
-          echo "Running pre-commit hooks (second pass - verification)..."
-          if ! pre-commit run --files variables.tf ibm_catalog.json tests/pr_test.go; then
-            echo "::error::Pre-commit hooks failed after auto-fix attempt"
-            git diff --name-only
-            exit 1
-          fi
-
-          echo "All pre-commit hooks passed!"
-
-      - name: Commit changes
+      - name: Commit and push
         env:
           NEW_VERSIONS: ${{ needs.compare-versions.outputs.new_versions }}
           DEPRECATED_VERSIONS: ${{ needs.compare-versions.outputs.deprecated_versions }}
           API_LATEST: ${{ needs.fetch-versions.outputs.api_latest }}
+          SERVICE_TYPE: ${{ inputs.icd_service_type }}
         run: |
-          # Stage the files (including any pre-commit fixes)
           git add variables.tf ibm_catalog.json tests/pr_test.go
 
-          # Build commit message
-          COMMIT_MSG="feat: update ${{ inputs.icd_service_type }} supported versions"
-
-          if [ -n "$NEW_VERSIONS" ]; then
-            COMMIT_MSG="$COMMIT_MSG
+          COMMIT_MSG="feat: update $SERVICE_TYPE supported versions"
+          [ -n "$NEW_VERSIONS" ] && COMMIT_MSG="$COMMIT_MSG
 
           Added versions: $NEW_VERSIONS"
-          fi
-
-          if [ -n "$DEPRECATED_VERSIONS" ]; then
-            COMMIT_MSG="$COMMIT_MSG
+          [ -n "$DEPRECATED_VERSIONS" ] && COMMIT_MSG="$COMMIT_MSG
           Removed versions: $DEPRECATED_VERSIONS"
-          fi
-
           COMMIT_MSG="$COMMIT_MSG
           Latest version: $API_LATEST"
 
           git commit -m "$COMMIT_MSG"
-          git push origin "${{ steps.branch.outputs.branch_name }}"
+          git push origin "${{ steps.update.outputs.branch_name }}"
 
       - name: Create Pull Request
         env:
@@ -548,64 +323,38 @@ jobs:
           API_LATEST: ${{ needs.fetch-versions.outputs.api_latest }}
           NEW_VERSIONS: ${{ needs.compare-versions.outputs.new_versions }}
           DEPRECATED_VERSIONS: ${{ needs.compare-versions.outputs.deprecated_versions }}
-          CURRENT_VERSIONS: ${{ needs.extract-current-versions.outputs.current_versions }}
           SERVICE_TYPE: ${{ inputs.icd_service_type }}
         run: |
-          # Build PR body
           PR_BODY="## Summary
-
-          This PR automatically updates the supported $SERVICE_TYPE versions based on the IBM Cloud Databases API.
+          This PR automatically updates supported $SERVICE_TYPE versions based on IBM Cloud Databases API.
 
           ### Version Changes
-
           | Type | Value |
           |------|-------|
-          | **Currently Supported** | $API_VERSIONS |
+          | **Supported Versions** | $API_VERSIONS |
           | **Latest Version** | $API_LATEST |"
-
-          if [ -n "$NEW_VERSIONS" ]; then
-            PR_BODY="$PR_BODY
-          | **Newly Added** | $NEW_VERSIONS |"
-          fi
-
-          if [ -n "$DEPRECATED_VERSIONS" ]; then
-            PR_BODY="$PR_BODY
-          | **Deprecated/Removed** | $DEPRECATED_VERSIONS |"
-          fi
+          [ -n "$NEW_VERSIONS" ] && PR_BODY="$PR_BODY
+          | **Added** | $NEW_VERSIONS |"
+          [ -n "$DEPRECATED_VERSIONS" ] && PR_BODY="$PR_BODY
+          | **Removed** | $DEPRECATED_VERSIONS |"
 
           PR_BODY="$PR_BODY
 
           ### Files Modified
-
-          - [x] \`variables.tf\` - Updated validation block with supported versions
-          - [x] \`ibm_catalog.json\` - Updated version options for catalog UI
-          - [x] \`tests/pr_test.go\` - Updated \`latestVersion\` constant
-
-          ### Verification Checklist
-
-          Before merging, please verify:
-
-          - [ ] Version list matches [IBM Cloud Databases documentation](https://cloud.ibm.com/docs/databases-for-$SERVICE_TYPE)
-          - [ ] No syntax errors: \`terraform validate\`
-          - [ ] JSON is valid: \`jq . ibm_catalog.json\`
-          - [ ] Tests pass: \`/run pipeline\`
+          - \`variables.tf\` - Updated version validation
+          - \`ibm_catalog.json\` - Updated catalog options
+          - \`tests/pr_test.go\` - Updated latestVersion
 
           ---
-          _This PR was automatically created by the ICD Version Update workflow._
-          _Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}_"
+          _Auto-generated by [ICD Version Update](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})_"
 
-          # Create labels if they don't exist
-          gh label create "automated-version-update" --description "Automated version update PR" --color "0E8A16" 2>/dev/null || true
-          gh label create "enhancement" --description "New feature or request" --color "A2EEEF" 2>/dev/null || true
-
-          # Create PR
+          gh label create "automated-version-update" --color "0E8A16" 2>/dev/null || true
           gh pr create \
             --title "feat: update $SERVICE_TYPE supported versions to include $API_LATEST" \
             --body "$PR_BODY" \
             --base main \
-            --head "${{ steps.branch.outputs.branch_name }}" \
-            --label "automated-version-update" \
-            --label "enhancement"
+            --head "${{ steps.update.outputs.branch_name }}" \
+            --label "automated-version-update"
 
   update-existing-pr:
     name: Update Existing PR
@@ -616,26 +365,17 @@ jobs:
       inputs.dry_run == false
     runs-on: ubuntu-latest
     steps:
-      - name: Add comment to existing PR
+      - name: Comment on existing PR
         env:
           GH_TOKEN: ${{ github.token }}
           EXISTING_PR: ${{ needs.check-existing-pr.outputs.existing_pr }}
           API_VERSIONS: ${{ needs.fetch-versions.outputs.api_versions }}
           API_LATEST: ${{ needs.fetch-versions.outputs.api_latest }}
         run: |
-          COMMENT="**Automated Version Check Update** - $(date -u +"%Y-%m-%d %H:%M:%S UTC")
-
-          A new version check was performed. Current IBM Cloud API versions:
-          - Versions: $API_VERSIONS
-          - Latest: $API_LATEST
-
-          This existing PR should still address the version updates. Please review and merge.
-
-          _Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}_"
-
-          gh pr comment "$EXISTING_PR" \
-            --repo "${{ github.repository }}" \
-            --body "$COMMENT"
+          gh pr comment "$EXISTING_PR" --repo "${{ github.repository }}" --body \
+            "**Version Check Update** ($(date -u +%Y-%m-%d))
+            Current API versions: $API_VERSIONS (latest: $API_LATEST)
+            _[Workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})_"
 
   dry-run-report:
     name: Dry Run Report
@@ -643,22 +383,16 @@ jobs:
     if: inputs.dry_run == true && needs.compare-versions.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     steps:
-      - name: Report what would happen
-        env:
-          API_VERSIONS: ${{ needs.fetch-versions.outputs.api_versions }}
-          API_LATEST: ${{ needs.fetch-versions.outputs.api_latest }}
-          NEW_VERSIONS: ${{ needs.compare-versions.outputs.new_versions }}
-          DEPRECATED_VERSIONS: ${{ needs.compare-versions.outputs.deprecated_versions }}
+      - name: Report
         run: |
-          echo "::notice::DRY RUN - Would create PR with the following changes:"
-          echo "Service: ${{ inputs.icd_service_type }}"
-          echo "API Versions: $API_VERSIONS"
-          echo "Latest Version: $API_LATEST"
-          echo "New Versions: $NEW_VERSIONS"
-          echo "Deprecated Versions: $DEPRECATED_VERSIONS"
+          echo "::notice::DRY RUN - Would update ${{ inputs.icd_service_type }} versions"
+          echo "Versions: ${{ needs.fetch-versions.outputs.api_versions }}"
+          echo "Latest: ${{ needs.fetch-versions.outputs.api_latest }}"
+          echo "New: ${{ needs.compare-versions.outputs.new_versions }}"
+          echo "Deprecated: ${{ needs.compare-versions.outputs.deprecated_versions }}"
 
   summary:
-    name: Workflow Summary
+    name: Summary
     needs: [fetch-versions, compare-versions]
     if: always()
     runs-on: ubuntu-latest
@@ -673,24 +407,18 @@ jobs:
           DEPRECATED_VERSIONS: ${{ needs.compare-versions.outputs.deprecated_versions || '' }}
         run: |
           {
-            echo "## ICD Version Check Summary"
-            echo ""
-            echo "**Service:** ${{ inputs.icd_service_type }}"
-            echo "**Dry Run:** ${{ inputs.dry_run }}"
-            echo ""
-
+            echo "## ICD Version Check: ${{ inputs.icd_service_type }}"
             if [ "$FETCH_SUCCESS" != "true" ]; then
-              echo ":warning: **API fetch failed** - Unable to retrieve versions from IBM Cloud"
+              echo ":warning: API fetch failed"
             elif [ "$HAS_CHANGES" == "true" ]; then
-              echo ":rocket: **Changes detected!**"
-              echo ""
-              echo "| Property | Value |"
-              echo "|----------|-------|"
-              echo "| API Versions | $API_VERSIONS |"
+              echo ":rocket: **Changes detected**"
+              echo "| | |"
+              echo "|---|---|"
+              echo "| Versions | $API_VERSIONS |"
               echo "| Latest | $API_LATEST |"
-              if [ -n "$NEW_VERSIONS" ]; then echo "| New | $NEW_VERSIONS |"; fi
-              if [ -n "$DEPRECATED_VERSIONS" ]; then echo "| Deprecated | $DEPRECATED_VERSIONS |"; fi
+              [ -n "$NEW_VERSIONS" ] && echo "| New | $NEW_VERSIONS |"
+              [ -n "$DEPRECATED_VERSIONS" ] && echo "| Deprecated | $DEPRECATED_VERSIONS |"
             else
-              echo ":white_check_mark: **No changes detected** - Versions are up to date"
+              echo ":white_check_mark: Versions up to date"
             fi
           } >> $GITHUB_STEP_SUMMARY
