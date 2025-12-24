@@ -234,9 +234,10 @@ jobs:
           # Convert versions to array
           IFS=' ' read -ra VERSION_ARRAY <<< "$API_VERSIONS"
 
-          # Build validation conditions and error message
+          # Build validation conditions (descending order - newest first) and error message
           CONDITION_LINES="      var.${VERSION_VAR_NAME} == null,"
-          for v in "${VERSION_ARRAY[@]}"; do
+          for ((i=${#VERSION_ARRAY[@]}-1; i>=0; i--)); do
+            v="${VERSION_ARRAY[$i]}"
             CONDITION_LINES="${CONDITION_LINES}\n      var.${VERSION_VAR_NAME} == \"$v\","
           done
           CONDITION_LINES=$(echo -e "$CONDITION_LINES" | sed '$ s/,$//')
@@ -373,14 +374,152 @@ jobs:
 
   update-existing-pr:
     name: Update Existing PR
-    needs: [fetch-versions, compare-versions, check-existing-pr]
+    needs: [extract-current-versions, fetch-versions, compare-versions, check-existing-pr]
     if: |
       needs.compare-versions.outputs.has_changes == 'true' &&
       needs.check-existing-pr.outputs.should_create == 'false' &&
       inputs.dry_run == false
     runs-on: ubuntu-latest
     steps:
-      - name: Comment on existing PR
+      - name: Get existing PR branch
+        id: pr-info
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXISTING_PR: ${{ needs.check-existing-pr.outputs.existing_pr }}
+        run: |
+          BRANCH=$(gh pr view "$EXISTING_PR" --repo "${{ github.repository }}" --json headRefName --jq '.headRefName')
+          echo "branch_name=$BRANCH" >> $GITHUB_OUTPUT
+
+      - name: Checkout existing PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pr-info.outputs.branch_name }}
+          fetch-depth: 0
+
+      - name: Setup tools
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: hashicorp/setup-terraform@v3
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          cache: false
+
+      - name: Update files
+        id: update
+        env:
+          API_VERSIONS: ${{ needs.fetch-versions.outputs.api_versions }}
+          API_LATEST: ${{ needs.fetch-versions.outputs.api_latest }}
+          VERSION_VAR_NAME: ${{ inputs.version_variable_name || format('{0}_version', inputs.icd_service_type) }}
+        run: |
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Convert versions to array
+          IFS=' ' read -ra VERSION_ARRAY <<< "$API_VERSIONS"
+
+          # Build validation conditions (descending order - newest first) and error message
+          CONDITION_LINES="      var.${VERSION_VAR_NAME} == null,"
+          for ((i=${#VERSION_ARRAY[@]}-1; i>=0; i--)); do
+            v="${VERSION_ARRAY[$i]}"
+            CONDITION_LINES="${CONDITION_LINES}\n      var.${VERSION_VAR_NAME} == \"$v\","
+          done
+          CONDITION_LINES=$(echo -e "$CONDITION_LINES" | sed '$ s/,$//')
+          VERSION_LIST=$(printf '%s, ' "${VERSION_ARRAY[@]}" | sed 's/, $//; s/, \([^,]*\)$/, or \1/')
+          ERROR_MSG="Version must be $VERSION_LIST. If no value passed, the current ICD preferred version is used."
+
+          # Find and update all .tf files with version validation blocks
+          UPDATED_TF_FILES=""
+          for tf_file in $(find . -name "*.tf" -type f ! -path "./.terraform/*"); do
+            if grep -q "var\.${VERSION_VAR_NAME} == \"" "$tf_file"; then
+              echo "Updating validation in: $tf_file"
+              awk -v var_name="$VERSION_VAR_NAME" -v new_conditions="$CONDITION_LINES" -v new_error="$ERROR_MSG" '
+              BEGIN { in_var=0; in_validation=0; skip_until_close=0 }
+              /^variable "'"$VERSION_VAR_NAME"'"/ { in_var=1 }
+              in_var && /validation \{/ { in_validation=1 }
+              in_var && in_validation && /condition = anytrue\(\[/ {
+                print "    condition = anytrue(["
+                print new_conditions
+                skip_until_close=1
+                next
+              }
+              skip_until_close && /\]\)/ { print "    ])"; skip_until_close=0; next }
+              skip_until_close { next }
+              in_var && in_validation && /error_message =/ { print "    error_message = \"" new_error "\""; next }
+              in_var && in_validation && /^\s*\}/ { in_validation=0 }
+              in_var && /^\}$/ { in_var=0 }
+              { print }
+              ' "$tf_file" > "${tf_file}.tmp" && mv "${tf_file}.tmp" "$tf_file"
+              UPDATED_TF_FILES="$UPDATED_TF_FILES $tf_file"
+            fi
+          done
+          echo "updated_tf_files=$UPDATED_TF_FILES" >> $GITHUB_OUTPUT
+
+          # Update ibm_catalog.json
+          if [ -f "ibm_catalog.json" ]; then
+            OPTIONS_JSON=$(printf '%s\n' "${VERSION_ARRAY[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0) | {displayname: ., value: .})')
+
+            jq --argjson opts "$OPTIONS_JSON" --arg latest "$API_LATEST" --arg var_name "$VERSION_VAR_NAME" '
+              .products[].flavors[]?.configuration? |= (if . then map(if .key == $var_name then .options = $opts | .default_value = $latest else . end) else . end)
+            ' ibm_catalog.json > ibm_catalog.json.tmp && mv ibm_catalog.json.tmp ibm_catalog.json
+          fi
+
+          # Update tests/pr_test.go
+          if [ -f "tests/pr_test.go" ]; then
+            sed -i "s/const latestVersion = \"[0-9.]*\"/const latestVersion = \"$API_LATEST\"/" tests/pr_test.go
+          fi
+
+      - name: Install dependencies and run pre-commit
+        env:
+          UPDATED_TF_FILES: ${{ steps.update.outputs.updated_tf_files }}
+        run: |
+          git submodule update --init --recursive
+          pip install pre-commit
+
+          export CUSTOM_DIRECTORY="${HOME}/.local/bin"
+          mkdir -p "$CUSTOM_DIRECTORY"
+          echo "$CUSTOM_DIRECTORY" >> $GITHUB_PATH
+          [ -f "ci/install-deps.sh" ] && chmod +x ci/install-deps.sh && ./ci/install-deps.sh
+
+          # Build list of files to check
+          FILES_TO_CHECK="ibm_catalog.json tests/pr_test.go $UPDATED_TF_FILES"
+
+          # Run pre-commit twice: first to apply fixes, second to verify
+          pre-commit run --files $FILES_TO_CHECK || true
+          git add $FILES_TO_CHECK 2>/dev/null || true
+          pre-commit run --files $FILES_TO_CHECK
+
+      - name: Commit and push updates
+        env:
+          NEW_VERSIONS: ${{ needs.compare-versions.outputs.new_versions }}
+          DEPRECATED_VERSIONS: ${{ needs.compare-versions.outputs.deprecated_versions }}
+          API_LATEST: ${{ needs.fetch-versions.outputs.api_latest }}
+          SERVICE_TYPE: ${{ inputs.icd_service_type }}
+          UPDATED_TF_FILES: ${{ steps.update.outputs.updated_tf_files }}
+        run: |
+          git add ibm_catalog.json tests/pr_test.go $UPDATED_TF_FILES
+
+          # Check if there are changes to commit
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          COMMIT_MSG="fix: update $SERVICE_TYPE version ordering and content"
+          [ -n "$NEW_VERSIONS" ] && COMMIT_MSG="$COMMIT_MSG
+
+          Added versions: $NEW_VERSIONS"
+          [ -n "$DEPRECATED_VERSIONS" ] && COMMIT_MSG="$COMMIT_MSG
+          Removed versions: $DEPRECATED_VERSIONS"
+          COMMIT_MSG="$COMMIT_MSG
+          Latest version: $API_LATEST"
+
+          git commit -m "$COMMIT_MSG"
+          git push origin HEAD
+
+      - name: Comment on PR
         env:
           GH_TOKEN: ${{ github.token }}
           EXISTING_PR: ${{ needs.check-existing-pr.outputs.existing_pr }}
@@ -388,8 +527,8 @@ jobs:
           API_LATEST: ${{ needs.fetch-versions.outputs.api_latest }}
         run: |
           gh pr comment "$EXISTING_PR" --repo "${{ github.repository }}" --body \
-            "**Version Check Update** ($(date -u +%Y-%m-%d))
-            Current API versions: $API_VERSIONS (latest: $API_LATEST)
+            "**PR Updated** ($(date -u +%Y-%m-%d))
+            Updated with latest API versions: $API_VERSIONS (latest: $API_LATEST)
             _[Workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})_"
 
   dry-run-report:
