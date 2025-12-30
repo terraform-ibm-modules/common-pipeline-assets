@@ -571,8 +571,8 @@ jobs:
               echo ":warning: API fetch failed"
             elif [ "$HAS_CHANGES" == "true" ]; then
               echo ":rocket: **Changes detected**"
-              echo "| | |"
-              echo "|---|---|"
+              echo "| Type | Value |"
+              echo "|------|-------|"
               echo "| Versions | $(echo "$API_VERSIONS" | tr ' ' ',') |"
               echo "| Latest | $API_LATEST |"
               [ -n "$NEW_VERSIONS" ] && echo "| New | $(echo "$NEW_VERSIONS" | tr ' ' ',') |" || true
