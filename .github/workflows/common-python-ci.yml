@@ -122,7 +122,7 @@ jobs:
             # Run pre-commit hooks
             echo "Running pre-commit checks..."
             if [ -f ".pre-commit-config.yaml" ]; then
-              uv run pre-commit run --all-files || echo "Pre-commit completed with issues"
+              uv run pre-commit run --all-files
             else
               echo "No pre-commit configuration found, skipping"
             fi
@@ -160,7 +160,7 @@ jobs:
             # Run pre-commit hooks
             echo "Running pre-commit checks..."
             if [ -f ".pre-commit-config.yaml" ]; then
-              pre-commit run --all-files || echo "Pre-commit completed with issues"
+              pre-commit run --all-files
             else
               echo "No pre-commit configuration found, skipping"
             fi
