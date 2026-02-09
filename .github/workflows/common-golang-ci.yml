@@ -1,5 +1,11 @@
 name: Golang-CI
 
+permissions:
+  contents: read
+  statuses: write
+  pull-requests: write
+  issues: write
+
 on:
   workflow_call:
 
