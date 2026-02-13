@@ -12,7 +12,7 @@ jobs:
       - name: setup node
         uses: actions/setup-node@v6
         with:
-          node-version: 24.13.0
+          node-version: 24.13.1
       - name: Cache dependencies
         id: cache
         uses: actions/cache@v5
