@@ -12,7 +12,7 @@ jobs:
       - name: setup node
         uses: actions/setup-node@v6
         with:
-          node-version: 24.14.0
+          node-version: 24.14.1
       - name: Cache dependencies
         id: cache
         uses: actions/cache@v5
@@ -50,11 +50,11 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 
   create-failure-notifications:
     needs: [ Release ]
