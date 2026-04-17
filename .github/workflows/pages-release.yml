@@ -12,7 +12,7 @@ jobs:
       - name: setup node
         uses: actions/setup-node@v6
         with:
-          node-version: 24.14.1
+          node-version: 24.15.0
       - name: Cache dependencies
         id: cache
         uses: actions/cache@v5
@@ -31,7 +31,7 @@ jobs:
       - name: npm build
         run: npm run build
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v5
         with:
           path: './build/'
   Release:
