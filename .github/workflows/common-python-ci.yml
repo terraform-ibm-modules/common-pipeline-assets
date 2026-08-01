@@ -47,7 +47,7 @@ jobs:
     outputs:
       python-version: ${{ steps.detect.outputs.python-version }}
     steps:
-      - uses: actions/checkout@v7.0.0
+      - uses: actions/checkout@v7.0.1
         with:
           token: ${{ secrets.GH_TOKEN }}
           ref: ${{ needs.start-pipeline.outputs.commit_id }}
@@ -89,7 +89,7 @@ jobs:
       image: icr.io/goldeneye_images/goldeneye-ci-image:stable
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v7.0.0
+      - uses: actions/checkout@v7.0.1
         with:
           token: ${{ secrets.GH_TOKEN }}
           submodules: true
@@ -105,7 +105,7 @@ jobs:
 
       # Set up Python
       - name: Set up Python ${{ needs.detect-python-version.outputs.python-version }}
-        uses: actions/setup-python@v6.3.0
+        uses: actions/setup-python@v7.0.0
         with:
           python-version: ${{ needs.detect-python-version.outputs.python-version }}
 

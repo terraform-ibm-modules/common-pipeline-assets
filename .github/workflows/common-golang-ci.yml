@@ -51,7 +51,7 @@ jobs:
       image: icr.io/goldeneye_images/goldeneye-ci-image:stable
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v7.0.0
+      - uses: actions/checkout@v7.0.1
         with:
           token: ${{ secrets.GH_TOKEN }}
           submodules: true
