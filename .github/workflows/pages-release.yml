@@ -6,6 +6,7 @@ on:
 permissions:
   id-token: write
   pages: write
+  issues: write
 
 jobs:
   Build:
@@ -37,7 +38,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5.0.0
         with:
-          path: './build/'
+          path: "./build/"
   Release:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
@@ -57,7 +58,7 @@ jobs:
         uses: actions/deploy-pages@v5.0.0
 
   create-failure-notifications:
-    needs: [ Release ]
+    needs: [Release]
     uses: ./.github/workflows/create-gh-issue-and-slack-message.yml
     if: ${{ failure() }}
     secrets: inherit
